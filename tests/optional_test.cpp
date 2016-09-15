@@ -263,5 +263,62 @@ namespace spi {
 			USING(value_t);
 			ASSERT_NO_FATAL_FAILURE(Test_Reference<value_t>(this->makeRVF()));
 		}
+
+		struct OptionalC : Random {};
+		TEST_F(OptionalC, Array) {
+			struct E_Counter : std::runtime_error {
+				E_Counter(): std::runtime_error("invalid counter value") {}
+			};
+			struct E_Canary : std::runtime_error {
+				E_Canary(): std::runtime_error("invalid canary id") {}
+			};
+			struct Item {
+				int	id, canary;
+				int* counter;
+				Item(int id, int* c):
+					id(id),
+					canary(id+1),
+					counter(c)
+				{
+					++(*counter);
+				}
+				Item(const Item& i):
+					id(i.id),
+					canary(i.canary),
+					counter(i.counter)
+				{
+					++(*counter);
+				}
+				//! カナリア値が破壊されていたら例外を投げる
+				void checkCanary() const {
+					if(canary != id+1)
+						throw E_Canary();
+				}
+				~Item() noexcept(false) {
+					if(!::testing::Test::HasFatalFailure() && !std::uncaught_exception()) {
+						checkCanary();
+						if(--(*counter) < 0)
+							throw E_Counter();
+					}
+				}
+			};
+			int counter = 0;
+			try {
+				// 配列にランダムな要素を追加
+				const auto mtf = this->mt().getUniformF<int>();
+				const int N = mtf({8, 64});
+				std::vector<Item>	items;
+				for(int i=0 ; i<N ; i++)
+					items.emplace_back(mtf(), &counter);
+				// 適当にシャッフル
+				std::shuffle(items.begin(), items.end(), this->mt().refMt());
+			} catch(const E_Canary& e) {
+				ASSERT_TRUE(false);
+			} catch(const E_Counter& e) {
+				ASSERT_TRUE(false);
+			} catch(...) {}
+			// コンストラクタとデストラクタが呼ばれる回数は等しい
+			ASSERT_EQ(0, counter);
+		}
 	}
 }
