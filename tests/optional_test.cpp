@@ -6,17 +6,17 @@ namespace spi {
 		template <class T>
 		struct Optional : Random {
 			using value_t = T;
-			using opt_t = ::spi::Optional<value_t>;
-			using popt_t = ::spi::Optional<value_t*>;
-			using ropt_t = ::spi::Optional<value_t&>;
 
 			template <class T2=T, ENABLE_IF(frea::is_number<T2>{})>
 			auto makeRV() {
 				return this->mt().template getUniform<T2>();
 			}
 			template <class T2=T, ENABLE_IF(!frea::is_number<T2>{})>
-			value_t makeRV() {
-				return value_t(makeRV<typename value_t::value_t>());
+			auto makeRV() {
+				return this->mt().template getUniform<typename T2::value_t>();
+			}
+			auto makeRVF() {
+				return [this](){ return this->makeRV(); };
 			}
 		};
 		using Types = ::testing::Types<uint8_t, uint64_t, double>;
@@ -32,122 +32,231 @@ namespace spi {
 			} while(res == t);
 			return res;
 		}
+		template <class T>
+		void ModifyValue(T& t) {
+			t = MakeDifferentValue(t);
+		}
 
-		TYPED_TEST(Optional, Test) {
-			USING(value_t);
-			USING(opt_t);
-			const value_t v0 = this->makeRV(),
-							v1 = MakeDifferentValue(v0);
+		template <class V, class MkValue, ENABLE_IF(!(std::is_copy_assignable<V>{}))>
+		void CheckCopyAssign(MkValue&&) {}
+		template <class V, class MkValue, ENABLE_IF((std::is_copy_assignable<V>{}))>
+		void CheckCopyAssign(MkValue&& mkv) {
+			::spi::Optional<V> op0, op1, op2;
+			const auto val = mkv();
+			// 値を代入するとtrue
+			op0 = val;
+			EXPECT_TRUE(op0);
+			EXPECT_NE(op0, op1);
+			// コピーすれば同値
+			op1 = op0;
+			EXPECT_EQ(op0, op1);
+			op2 = MakeDifferentValue(val);
+			EXPECT_NE(op0, op2);
+			// Valueのcopy-assign
+			op0 = op2.get();
+			EXPECT_EQ(op2, op0);
+			// Optionalのcopy-assign
+			op2 = MakeDifferentValue(*op0);
+			op0 = op2;
+			EXPECT_EQ(op0, op2);
+		}
+		template <class V, class MkValue, ENABLE_IF(!(std::is_move_assignable<V>{}))>
+		void CheckMoveAssign(MkValue&&) {}
+		template <class V, class MkValue, ENABLE_IF((std::is_move_assignable<V>{}))>
+		void CheckMoveAssign(MkValue&& mkv) {
+			::spi::Optional<V> op0, op1, op2;
+			const auto val = mkv();
+			// 値を代入するとtrue
+			op0 = V(val);
+			EXPECT_TRUE(op0);
+			EXPECT_NE(op0, op1);
+			// Valueのcopy-assign
+			// 同じ値をmove-assignすると==はtrue
+			op1 = V(val);
+			EXPECT_EQ(op0, op1);
+			// Optionalのcopy-assign
+			// 別のoptionalへmove-assignしても==はtrue
+			op2 = std::move(op1);
+			EXPECT_EQ(op0, op2);
+		}
+		template <class V, class MkValue, ENABLE_IF(!(std::is_copy_constructible<V>{}))>
+		void CheckCopyConstruct(MkValue&&) {}
+		template <class V, class MkValue, ENABLE_IF((std::is_copy_constructible<V>{}))>
+		void CheckCopyConstruct(MkValue&& mkv) {
+			const auto src0 = mkv(),
+						src1 = MakeDifferentValue(src0);
+			const V val0(src0),
+					val1(src1);
+			// ValueからのCopyConstruct
+			::spi::Optional<V> op0(val0),
+								op1(val1);
+			EXPECT_EQ(val0, *op0);
+			EXPECT_NE(op0, op1);
+			// OptionalからのCopyConstruct
+			::spi::Optional<V> op2(op0);
+			EXPECT_EQ(op0, op2);
+		}
+		template <class V, class MkValue, ENABLE_IF(!(std::is_move_constructible<V>{}))>
+		void CheckMoveConstruct(MkValue&&) {}
+		template <class V, class MkValue, ENABLE_IF((std::is_move_constructible<V>{}))>
+		void CheckMoveConstruct(MkValue&& mkv) {
+			const auto src0 = mkv(),
+						src1 = MakeDifferentValue(src0);
+			// ValueからのMoveConstruct
+			::spi::Optional<V> op0(V{src0}), op1(V{src1});
+			EXPECT_EQ(V(src0), *op0);
+			EXPECT_NE(op0, op1);
+			// OptionalからのMoveConstruct
+			::spi::Optional<V> op2(V{src0});
+			op1 = std::move(op0);
+			EXPECT_EQ(op2, op1);
+		}
+
+		//! Optionalテストケース: 非ポインタ、非リファレンス
+		template <class V, class MkValue>
+		void Test_General(MkValue&& mkv) {
 			{
-				opt_t op0, op1;
+				::spi::Optional<V> op0, op1(none);
 				// デフォルトの状態ではfalse
 				EXPECT_FALSE(op0);
-				// 値を代入するとtrue
-				op0 = v0;
+				EXPECT_FALSE(op1);
+				EXPECT_EQ(op0, op1);
+			}
+			{
+				const auto src0 = mkv(),
+							src1 = MakeDifferentValue(src0);
+				::spi::Optional<V> op0(src0), op1(src1), op2(src0);
 				EXPECT_TRUE(op0);
-				// 参照した値の比較
-				EXPECT_EQ(v0, *op0);
-				EXPECT_NE(v1, *op0);
-				op1 = v1;
 				EXPECT_NE(op0, op1);
-				// 値のコピーテスト
-				op1 = op0;
-				EXPECT_EQ(op0, op1);
-				EXPECT_EQ(*op0, *op1);
-				// 値のムーブテスト
-				op1 = v1;
-				op0 = std::move(op1);
-				EXPECT_EQ(v1, *op0);
-			}
-			{
-				// コピーコンストラクタのチェック
-				opt_t op0(v0), op1;
-				EXPECT_EQ(v0, *op0);
-				op1 = v0;
-				EXPECT_EQ(op0, op1);
-			}
-			{
-				// ムーブコンストラクタのチェック
-				opt_t op0(std::move(v0)), op1;
-				EXPECT_EQ(v0, *op0);
-				op1 = v0;
-				EXPECT_EQ(op0, op1);
-				// noneの代入 -> 無効化
+				EXPECT_EQ(op2, op0);
+
 				op0 = none;
 				EXPECT_FALSE(op0);
-				EXPECT_NE(op0, op1);
+				EXPECT_NE(op0, op2);
 			}
+			// 値のコピーテスト
+			EXPECT_NO_FATAL_FAILURE(CheckCopyAssign<V>(mkv));
+			// 値のムーブテスト
+			EXPECT_NO_FATAL_FAILURE(CheckMoveAssign<V>(mkv));
+			// コピーコンストラクタのチェック
+			EXPECT_NO_FATAL_FAILURE(CheckCopyConstruct<V>(mkv));
+			// ムーブコンストラクタのチェック
+			EXPECT_NO_FATAL_FAILURE(CheckMoveConstruct<V>(mkv));
 		}
-		TYPED_TEST(Optional, Test_Reference) {
-			USING(value_t);
-			USING(ropt_t);
-			value_t v0 = this->makeRV();
-			{
-				ropt_t rp0;
-				// デフォルトの状態ではfalse
-				EXPECT_FALSE(rp0);
-				// 値を代入するとtrue
-				rp0 = v0;
-				EXPECT_TRUE(rp0);
-				// デリファレンスした値(=参照)の比較
-				EXPECT_EQ(v0, *rp0);
-				// 元の値を変更すればoptionalの方でも反映される
-				v0 = MakeDifferentValue(v0);
-				EXPECT_EQ(v0, *rp0);
-		
-				// 参照する値を変更
-				value_t v1 = MakeDifferentValue(v0);
-				rp0 = v1;
-				EXPECT_EQ(v1, rp0.get());
-				EXPECT_NE(v0, rp0.get());
-				// デリファレンスに代入すると参照先の値も書き換わる
-				*rp0 = v0;
-				EXPECT_EQ(v0, rp0.get());
-			}
-			{
-				// optional経由で値を書き換え
-				ropt_t rp0(v0);
-				const value_t v1 = MakeDifferentValue(v0);
-				*rp0 = v1;
-				EXPECT_EQ(v1, *rp0);
-			}
+
+		template <class V, class MkValue, ENABLE_IF(!(std::is_move_assignable<V>{}))>
+		void CheckWriteThroughPointer(MkValue&&) {}
+		template <class V, class MkValue, ENABLE_IF((std::is_move_assignable<V>{}))>
+		void CheckWriteThroughPointer(MkValue&& mkv) {
+			const auto src0 = mkv(),
+						src1 = MakeDifferentValue(src0);
+			auto p0 = std::make_unique<V>(src0),
+				 p1 = std::make_unique<V>(src1),
+				 p2 = std::make_unique<V>(src1);
+			// optional経由で値を書き換え
+			::spi::Optional<V*> pp0(p0.get());
+			*(*pp0) = std::move(*p1);
+			EXPECT_EQ(*p2, *(*pp0));
 		}
-		TYPED_TEST(Optional, Test_Pointer) {
-			USING(value_t);
-			USING(popt_t);
-			value_t v0 = this->makeRV();
+		//! Optionalテストケース: ポインタ
+		template <class V, class MkValue>
+		void Test_Pointer(MkValue&& mkv) {
+			const auto src0 = mkv(),
+						src1 = MakeDifferentValue(src0);
+			auto p0 = std::make_unique<V>(src0),
+				 p1 = std::make_unique<V>(src1),
+				 p2 = std::make_unique<V>(src0);
 			{
-				popt_t pp0;
+				::spi::Optional<V*> pp0, pp2(p2.get());
 				// デフォルトの状態ではfalse
 				EXPECT_FALSE(pp0);
 				// 値を代入するとtrue
-				pp0 = &v0;
+				pp0 = p0.get();
 				EXPECT_TRUE(pp0);
+				// 中身の値が同じでもポインタが違えば==はfalse
+				EXPECT_NE(pp0, pp2);
 				// デリファレンスした値(=ポインタ)の比較
-				EXPECT_EQ(&v0, *pp0);
+				EXPECT_EQ(p0.get(), *pp0);
 				// 元の値を変更すればoptionalの方でも反映される
-				value_t tmp;
-				do {
-					tmp = this->makeRV();
-				} while(tmp == 0);
-				v0 += tmp;
-				EXPECT_EQ(v0, *(*pp0));
-		
+				ModifyValue(*p0);
+				EXPECT_EQ(*p0, *(*pp0));
+
 				// 参照する値を変更
-				value_t v1 = MakeDifferentValue(v0);
-				pp0 = &v1;
-				EXPECT_EQ(v1, *pp0.get());
+				pp0 = p1.get();
+				EXPECT_EQ(p1.get(), *pp0);
 				// デリファレンスに代入してもポインタなので値そのものは書き換わらない
-				pp0.get() = &v0;
-				EXPECT_NE(v1, *pp0.get());
+				*pp0 = p2.get();
+				EXPECT_NE(*p1, *(*pp0));
+			}
+			CheckWriteThroughPointer<V>(mkv);
+		}
+
+		template <class V, class MkValue, ENABLE_IF(!(std::is_move_assignable<V>{}))>
+		void CheckDereference(MkValue&&) {}
+		template <class V, class MkValue, ENABLE_IF((std::is_move_assignable<V>{}))>
+		void CheckDereference(MkValue&& mkv) {
+			const auto src0 = mkv(),
+						src1 = MakeDifferentValue(src0);
+			{
+				// デリファレンスに値を代入すると値そのものも書き換わる
+				V	val0(src0);
+				::spi::Optional<V&> rp0(val0);
+				*rp0 = V(src1);
+				EXPECT_NE(V(src0), *rp0);
+				EXPECT_EQ(V(src1), *rp0);
+			}
+		}
+		//! Optionalテストケース: リファレンス
+		template <class V, class MkValue>
+		void Test_Reference(MkValue&& mkv) {
+			const auto src0 = mkv();
+			{
+				V	val0(src0),
+					val1(MakeDifferentValue(src0)),
+					val2(src0);
+				::spi::Optional<V&> rp0, rp2(val2);
+				// デフォルトの状態ではfalse
+				EXPECT_FALSE(rp0);
+				// 値を代入するとtrue
+				rp0 = val0;
+				EXPECT_TRUE(rp0);
+				// 参照が違っても中身の値が同じなら==はtrue
+				EXPECT_EQ(rp0, rp2);
+				// デリファレンスした値(=参照)の比較
+				EXPECT_EQ(val0, *rp0);
+				// 元の値を変更すればoptionalの方でも反映される
+				ModifyValue(val0);
+				EXPECT_EQ(val0, *rp0);
+
+				// 参照する値を変更
+				rp0 = val1;
+				EXPECT_EQ(val1, *rp0);
+				EXPECT_EQ(&val1, &(*rp0));
 			}
 			{
+				// Optionalを代入しても元の値は書き換わらない
+				V	val0(src0),
+					val1(MakeDifferentValue(src0));
 				// optional経由で値を書き換え
-				popt_t pp1(&v0);
-				const value_t v1 = MakeDifferentValue(v0);
-				*(*pp1) = v1;
-				EXPECT_EQ(v1, *(*pp1));
+				::spi::Optional<V&> rp0(val0), rp1(val1);
+				rp0 = rp1;
+				EXPECT_EQ(V(src0), val0);
+				EXPECT_EQ(*rp1, *rp0);
 			}
+			CheckDereference<V>(mkv);
+		}
+
+		TYPED_TEST(Optional, Test) {
+			USING(value_t);
+			ASSERT_NO_FATAL_FAILURE(Test_General<value_t>(this->makeRVF()));
+		}
+		TYPED_TEST(Optional, Test_Pointer) {
+			USING(value_t);
+			ASSERT_NO_FATAL_FAILURE(Test_Pointer<value_t>(this->makeRVF()));
+		}
+		TYPED_TEST(Optional, Test_Reference) {
+			USING(value_t);
+			ASSERT_NO_FATAL_FAILURE(Test_Reference<value_t>(this->makeRVF()));
 		}
 	}
 }
