@@ -1,5 +1,6 @@
 #include "test.hpp"
 #include "../optional.hpp"
+#include "moveonly.hpp"
 
 namespace spi {
 	namespace test {
@@ -19,7 +20,7 @@ namespace spi {
 				return [this](){ return this->makeRV(); };
 			}
 		};
-		using Types = ::testing::Types<uint8_t, uint64_t, double>;
+		using Types = ::testing::Types<uint8_t, uint64_t, double, MoveOnly<uint64_t>>;
 		TYPED_TEST_CASE(Optional, Types);
 
 		template <class T>
@@ -35,6 +36,10 @@ namespace spi {
 		template <class T>
 		void ModifyValue(T& t) {
 			t = MakeDifferentValue(t);
+		}
+		template <class T>
+		void ModifyValue(MoveOnly<T>& t) {
+			ModifyValue(t.get());
 		}
 
 		template <class V, class MkValue, ENABLE_IF(!(std::is_copy_assignable<V>{}))>
