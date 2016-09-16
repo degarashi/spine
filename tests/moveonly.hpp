@@ -49,6 +49,10 @@ namespace spi {
 				const value_t& get() const noexcept {
 					return _value;
 				}
+				template <class Ar>
+				void serialize(Ar& ar) {
+					ar(_value);
+				}
 		};
 	}
 }

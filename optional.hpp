@@ -2,6 +2,7 @@
 #include "detect_type.hpp"
 #include "meta/enable_if.hpp"
 #include <utility>
+#include <cereal/cereal.hpp>
 
 namespace spi {
 	const static struct none_t{} none;
@@ -52,6 +53,10 @@ namespace spi {
 					return *this;
 				}
 				#undef NOEXCEPT_WHEN_RAW
+				template <class Ar>
+				void serialize(Ar& ar) {
+					ar(get());
+				}
 			};
 			template <class T>
 			struct Buffer<T&> {
@@ -80,6 +85,11 @@ namespace spi {
 					_data = &t;
 					return *this;
 				}
+				// 参照のシリアライズには対応しない
+				template <class Ar>
+				void serialize(Ar&) {
+					static_assert(!sizeof(Ar), "can't serialize reference");
+				}
 			};
 			template <class T>
 			struct Buffer<T*> {
@@ -107,6 +117,11 @@ namespace spi {
 				Buffer& operator = (T* t) noexcept {
 					_data = t;
 					return *this;
+				}
+				// ポインタのシリアライズには対応しない
+				template <class Ar>
+				void serialize(Ar&) {
+					static_assert(!sizeof(Ar), "can't serialize pointer");
 				}
 			};
 		}
@@ -229,6 +244,13 @@ namespace spi {
 					_buffer = std::forward<T2>(t).get();
 				}
 				return *this;
+			}
+			template <class Ar>
+			void serialize(Ar& ar) {
+				ar(CEREAL_NVP(_bInit));
+				if(_bInit) {
+					_buffer.serialize(ar);
+				}
 			}
 	};
 	template <class T>

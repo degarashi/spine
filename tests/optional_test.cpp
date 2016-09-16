@@ -263,6 +263,10 @@ namespace spi {
 			USING(value_t);
 			ASSERT_NO_FATAL_FAILURE(Test_Reference<value_t>(this->makeRVF()));
 		}
+		TYPED_TEST(Optional, Serialization) {
+			::spi::Optional<TypeParam> opt(this->makeRV());
+			CheckSerialization(opt);
+		}
 
 		struct OptionalC : Random {};
 		TEST_F(OptionalC, Array) {
