@@ -8,11 +8,11 @@ namespace spi {
 		struct Optional : Random {
 			using value_t = T;
 
-			template <class T2=T, ENABLE_IF(frea::is_number<T2>{})>
+			template <class T2=T, ENABLE_IF(lubee::is_number<T2>{})>
 			auto makeRV() {
 				return this->mt().template getUniform<T2>();
 			}
-			template <class T2=T, ENABLE_IF(!frea::is_number<T2>{})>
+			template <class T2=T, ENABLE_IF(!lubee::is_number<T2>{})>
 			auto makeRV() {
 				return this->mt().template getUniform<typename T2::value_t>();
 			}
@@ -265,7 +265,7 @@ namespace spi {
 		}
 		TYPED_TEST(Optional, Serialization) {
 			::spi::Optional<TypeParam> opt(this->makeRV());
-			CheckSerialization(opt);
+			lubee::CheckSerialization(opt);
 		}
 
 		struct OptionalC : Random {};

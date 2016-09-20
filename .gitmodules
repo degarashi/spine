@@ -1,0 +1,3 @@
+[submodule "lubee"]
+	path = lubee
+	url = ../lubee
