@@ -3,17 +3,14 @@
 #include <memory>
 #include <cassert>
 #include "lubee/meta/enable_if.hpp"
+#include "lubee/error.hpp"
 #include <cstring>
 
-void pass() {}
 #ifdef DEBUG
-	#define AssertD(exp) assert(exp)
 	#define NOEXCEPT_IF_RELEASE
 #else
-	#define AssertD(exp) pass()
 	#define NOEXCEPT_IF_RELEASE noexcept
 #endif
-#define Assert(exp) assert(exp)
 #ifdef OBJECT_POOL_CHECKBLOCK
 	#define CallCheckBlock() checkBlock()
 #else
@@ -74,13 +71,13 @@ namespace spi {
 					using IVector = std::vector<Id>;
 					IVector			_freeId;
 					static uint32_t _GetIndexOut(uint32_t m) {
-						AssertD(m > 0);
+						D_Assert0(m > 0);
 						if(m==1)
 							return 0;
 						return MSB(m-1)+1;
 					}
 					static uint32_t _GetIndexIn(uint32_t m) {
-						AssertD(m > 0);
+						D_Assert0(m > 0);
 						if(m==1)
 							return 0;
 						return MSB(m);
@@ -110,7 +107,7 @@ namespace spi {
 							Canary	canary;
 							void checkCanary() const {
 								auto* ft = getFooter();
-								AssertD(canary == ft->canary);
+								D_Assert0(canary == ft->canary);
 							}
 							void setCanary(const Canary c) {
 								canary = getFooter()->canary = c;
@@ -125,7 +122,7 @@ namespace spi {
 							getFooter()->size = s;
 						}
 						void setNeighbor(const Id prev, const Id next) NOEXCEPT_IF_RELEASE {
-							AssertD(!bUse);
+							D_Assert0(!bUse);
 							auto* eb = getEmptyBlock();
 							eb->prevId = prev;
 							eb->nextId = next;
@@ -178,13 +175,13 @@ namespace spi {
 					}
 					Id _idFromHeader(const Header* hdr) const noexcept {
 						const auto diff = uintptr_t(hdr) - _blockBegin();
-						AssertD(diff % BlockSize == 0);
+						D_Assert0(diff % BlockSize == 0);
 						return diff / BlockSize;
 					}
 					void _registerBlock(Header* h) NOEXCEPT_IF_RELEASE {
-						AssertD(_used >= h->size);
+						D_Assert0(_used >= h->size);
 						_used -= h->size;
-						AssertD(h->bUse);
+						D_Assert0(h->bUse);
 						h->bUse = false;
 						#ifdef DEBUG
 							h->checkAndSetCanary(++s_canary);
@@ -194,9 +191,9 @@ namespace spi {
 						h->setNeighbor(InvalidId, freeId);
 						if(freeId != InvalidId) {
 							auto* fh = _headerAt(freeId);
-							AssertD(!fh->bUse);
+							D_Assert0(!fh->bUse);
 							auto* feb = fh->getEmptyBlock();
-							AssertD(feb->prevId == InvalidId);
+							D_Assert0(feb->prevId == InvalidId);
 							feb->prevId = id;
 						}
 						freeId = id;
@@ -205,24 +202,24 @@ namespace spi {
 					void _unregisterBlock(Header* h) NOEXCEPT_IF_RELEASE {
 						CallCheckBlock();
 						_used += h->size;
-						AssertD(!h->bUse);
+						D_Assert0(!h->bUse);
 						const auto* eb = h->getEmptyBlock();
 						if(eb->nextId != InvalidId) {
 							auto* nhdr = _headerAt(eb->nextId);
-							AssertD(!nhdr->bUse);
+							D_Assert0(!nhdr->bUse);
 							auto* neb = nhdr->getEmptyBlock();
-							AssertD(neb->prevId == _idFromHeader(h));
+							D_Assert0(neb->prevId == _idFromHeader(h));
 							neb->prevId = eb->prevId;
 						}
 						if(eb->prevId != InvalidId) {
 							auto* phdr = _headerAt(eb->prevId);
-							AssertD(!phdr->bUse);
+							D_Assert0(!phdr->bUse);
 							auto* peb = phdr->getEmptyBlock();
-							AssertD(peb->nextId == _idFromHeader(h));
+							D_Assert0(peb->nextId == _idFromHeader(h));
 							peb->nextId = eb->nextId;
 						} else {
 							auto& fid = _freeId[_GetIndexIn(h->size)];
-							AssertD(fid == _idFromHeader(h));
+							D_Assert0(fid == _idFromHeader(h));
 							fid = eb->nextId;
 						}
 						h->bUse = true;
@@ -233,7 +230,7 @@ namespace spi {
 					}
 					T* _acquireFrom(Header* h, const std::size_t s) NOEXCEPT_IF_RELEASE {
 						_unregisterBlock(h);
-						AssertD(h->size >= s);
+						D_Assert0(h->size >= s);
 						const auto remain = h->size - s;
 						if(remain > 0) {
 							h->setSize(s);
@@ -309,7 +306,7 @@ namespace spi {
 								* end = _headerEnd();
 							auto size = _size;
 							while(ptr < end) {
-								Assert(size >= ptr->size);
+								Assert0(size >= ptr->size);
 								if(!ptr->bUse) {
 									Id thisId = _idFromHeader(ptr);
 									Id id = _freeId[_GetIndexIn(ptr->size)],
@@ -317,21 +314,21 @@ namespace spi {
 									for(;;) {
 										if(id == thisId)
 											break;
-										Assert(id != InvalidId);
+										Assert0(id != InvalidId);
 										auto* eb = _headerAt(id)->getEmptyBlock();
-										Assert(eb->prevId == prevId);
+										Assert0(eb->prevId == prevId);
 										prevId = id;
 										id = eb->nextId;
 									}
 								}
 								size -= ptr->size;
-								Assert(ptr->size != 0 && ptr->size <= _size);
+								Assert0(ptr->size != 0 && ptr->size <= _size);
 								const auto* ft = ptr->getFooter();
-								Assert(ft->size == ptr->size);
-								Assert(ptr->getNextBlock(ptr->size) == ptr->getNextHeader());
+								Assert0(ft->size == ptr->size);
+								Assert0(ptr->getNextBlock(ptr->size) == ptr->getNextHeader());
 								ptr = ptr->getNextBlock(ptr->size);
 							}
-							Assert(ptr == end);
+							Assert0(ptr == end);
 
 							for(int i=0 ; i<int(_freeId.size()) ; i++) {
 								const Size_t smin = 1<<i,
@@ -339,7 +336,7 @@ namespace spi {
 								Id id = _freeId[i];
 								while(id != InvalidId) {
 									const auto* ptr = _headerAt(id);
-									Assert(ptr->size >= smin &&
+									Assert0(ptr->size >= smin &&
 											ptr->size < smax &&
 											!ptr->bUse);
 									id = ptr->getEmptyBlock()->nextId;
@@ -362,7 +359,7 @@ namespace spi {
 					}
 					T* acquireBlock(const std::size_t s) NOEXCEPT_IF_RELEASE {
 						CallCheckBlock();
-						AssertD(s>0);
+						D_Assert0(s>0);
 
 						auto cur = _GetIndexOut(s);
 						if(decltype(cur)(_freeId.size()) <= cur)
@@ -375,7 +372,7 @@ namespace spi {
 							auto& id = _freeId[cur];
 							if(id != InvalidId) {
 								auto* hdr = _headerAt(id);
-								AssertD(hdr->size >= s);
+								D_Assert0(hdr->size >= s);
 								return _acquireFrom(hdr, s);
 							}
 							++cur;
@@ -383,11 +380,11 @@ namespace spi {
 						return nullptr;
 					}
 					void putBlock(T* p) NOEXCEPT_IF_RELEASE {
-						AssertD(p);
+						D_Assert0(p);
 						auto* hdr = _ToHeader(p);
-						AssertD(hasMemory(p) && hdr->size>0);
+						D_Assert0(hasMemory(p) && hdr->size>0);
 						// 二重解放についてはRelease時にもチェックし、失敗したらクラッシュさせる
-						Assert(hdr->bUse);
+						Assert0(hdr->bUse);
 
 						{
 							auto* ptr = hdr->getDataArea();
@@ -501,7 +498,7 @@ namespace spi {
 						return;
 					}
 				}
-				AssertD(false);
+				D_Assert0(false);
 			}
 	};
 	template <class T>
