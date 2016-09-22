@@ -13,25 +13,10 @@ namespace spi {
 				_Num
 			} e;
 		};
-		// コンストラクタ・デストラクタが呼ばれる回数をチェックする機構の初期化
-		template <class T, ENABLE_IF(!std::is_trivial<T>{})>
-		void Initialize() {
-			T::Initialize();
-		}
-		template <class T, ENABLE_IF(std::is_trivial<T>{})>
-		void Initialize() {}
-
-		// コンストラクタ・デストラクタが呼ばれる回数をチェック
-		template <class T, class V, ENABLE_IF(!std::is_trivial<T>{})>
-		void CheckCounter(const V& v) {
-			ASSERT_TRUE(T::CheckCounter(v));
-		}
-		template <class T, class V, ENABLE_IF(std::is_trivial<T>{})>
-		void CheckCounter(const V&) {}
 
 		template <class T, class MTF, class MkValue>
 		void TestPool(MTF&& mtf, MkValue&& mkValue) {
-			Initialize<T>();
+			InitializeCounter<T>();
 
 			// 初期サイズをランダムで決める
 			const int initial = mtf({1,10});
@@ -168,43 +153,10 @@ namespace spi {
 				}
 			}
 		}
-		template <class T>
-		struct MyObj {
-			using value_t = T;
-			value_t value;
-			static int s_counter;
-			MyObj() {
-				++s_counter;
-			}
-			MyObj(const value_t& v):
-				value(v)
-			{
-				++s_counter;
-			}
-			MyObj(const MyObj&) = delete;
-			~MyObj() {
-				--s_counter;
-			}
-			bool operator == (const MyObj& m) const {
-				return value == m.value;
-			}
-			static void Initialize() {
-				s_counter = 0;
-			}
-			static bool CheckCounter(const int c) {
-				return c == s_counter;
-			}
-		};
-		template <class T>
-		int MyObj<T>::s_counter;
-		template <class T>
-		inline bool operator == (const T& t, const MyObj<T>& o) {
-			return o == t;
-		}
 
 		template <class T>
 		struct ObjectPool : Random {};
-		using Types = ::testing::Types<MyObj<int>, MyObj<double>>;
+		using Types = ::testing::Types<TestObj<int>, TestObj<double>>;
 		TYPED_TEST_CASE(ObjectPool, Types);
 
 		// Trivialではないオブジェクトの生成、破棄
