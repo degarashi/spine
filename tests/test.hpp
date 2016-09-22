@@ -12,7 +12,7 @@ namespace spi {
 				lubee::RandomMT	_mt;
 			public:
 				Random(): _mt(lubee::RandomMT::Make<4>()) {}
-				auto& mt() {
+				auto& mt() noexcept {
 					return _mt;
 				}
 		};
@@ -28,35 +28,38 @@ namespace spi {
 			public:
 				TestObj(TestObj&&) = default;
 				TestObj(const TestObj&) = delete;
-				TestObj() {
+				TestObj() noexcept {
 					++s_counter;
 				}
-				TestObj(const value_t& v):
+				TestObj(const value_t& v) noexcept:
 					_value(v)
 				{
 					++s_counter;
 				}
-				~TestObj() {
+				~TestObj() noexcept {
 					--s_counter;
 				}
 				TestObj& operator = (const T& t) {
 					_value = t;
 					return *this;
 				}
-				bool operator == (const TestObj& m) const {
+				value_t getValue() const noexcept {
+					return _value;
+				}
+				bool operator == (const TestObj& m) const noexcept {
 					return _value == m._value;
 				}
-				static void InitializeCounter() {
+				static void InitializeCounter() noexcept {
 					s_counter = 0;
 				}
-				static bool CheckCounter(const int c) {
+				static bool CheckCounter(const int c) noexcept {
 					return c == s_counter;
 				}
 		};
 		template <class T>
 		int TestObj<T>::s_counter;
 		template <class T>
-		inline bool operator == (const T& t, const TestObj<T>& o) {
+		inline bool operator == (const T& t, const TestObj<T>& o) noexcept {
 			return o == t;
 		}
 		// コンストラクタ・デストラクタが呼ばれる回数をチェックする機構の初期化
@@ -65,7 +68,7 @@ namespace spi {
 			T::InitializeCounter();
 		}
 		template <class T, ENABLE_IF(std::is_trivial<T>{})>
-		void InitializeCounter() {}
+		void InitializeCounter() noexcept {}
 
 		// コンストラクタ・デストラクタが呼ばれる回数をチェック
 		template <class T, class V, ENABLE_IF(!std::is_trivial<T>{})>
@@ -73,6 +76,6 @@ namespace spi {
 			ASSERT_TRUE(T::CheckCounter(v));
 		}
 		template <class T, class V, ENABLE_IF(std::is_trivial<T>{})>
-		void CheckCounter(const V&) {}
+		void CheckCounter(const V&) noexcept {}
 	}
 }
