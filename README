@@ -11,6 +11,6 @@
 依存ライブラリ:
 	GoogleTest (単体テストをする場合のみ)
 	Cereal (シリアライズ用)
-依存ライブラリ(予定):
 	boost::preprocessor
+依存ライブラリ(予定):
 	boost::format
