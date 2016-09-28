@@ -47,12 +47,57 @@ namespace spi {
 			return BitCount(uint32_t(v)) + BitCount(uint32_t(v>>32));
 		}
 
+		template <class MT, class R>
+		struct RFRefr {
+			using Types0 = lubee::Types<typename R::Value2, typename R::Value3, typename R::Value02>;
+			using Types1 = lubee::Types<typename R::Value3>;
+			using TypesC = typename Types0::template Append<Types1>;
+
+			MT&				_mt;
+			const uint32_t	_mask;
+			RFRefr(MT& mt):
+				_mt(mt),
+				_mask(mt.template getUniform<uint32_t>({0, TypesC::size-1}))
+			{}
+
+			uint32_t getTestPattern() const {
+				return _mask;
+			}
+			template <int N>
+			using IConst = lubee::IConst<N>;
+
+			template <class Types, class Obj>
+			void _apply(Obj&, IConst<Types::size>, uint32_t) const {}
+			template <class Types, class Obj, int N, ENABLE_IF((N != Types::size))>
+			void _apply(Obj& obj, IConst<N>, uint32_t mask) const {
+				using Tag = typename Types::template At<N>;
+				if(mask & 1) {
+					const auto val = _mt.template getUniform<typename Tag::value_t>();
+					obj._rflag.template set<Tag>(val);
+					obj.template _updateSetflag<Tag>();
+				}
+				_apply<Types>(obj, IConst<N+1>(), mask>>1);
+			}
+			template <class Dst, class T>
+			void value01(Dst& dst, T& obj) const {
+				dst = obj.getValue0() + obj.getValue1();
+				_apply<Types0>(obj, IConst<0>(), _mask&((1<<Types0::size)-1));
+			}
+			template <class Dst, class T>
+			void value02(Dst& dst, T& obj) const {
+				dst = obj.getValue0() - obj.getValue2();
+				_apply<Types1>(obj, IConst<0>(), _mask>>Types0::size);
+			}
+		};
+
 		using CTypes = lubee::Types<float,uint32_t,uint64_t,int16_t>;
 		using Value01_t = float;
 		using Value02_t = double;
 		using Value01_02_3_t = int32_t;
 		template <class MT>
 		class RFObj {
+			template <class, class>
+			friend struct RFRefr;
 			private:
 				template <int N>
 				using IConst = lubee::IConst<N>;
@@ -151,17 +196,24 @@ namespace spi {
 				static ChkFunc _CheckF(IConst<Action::Get>) {
 					return
 						[](RFObj& obj){
-							// 下位の値から算出
-							const auto val = obj._calcValue((Tag*)nullptr);
-							// 最下位の値を除いた更新フラグの数だけカウンタがインクリメントされる(筈)
-							const RFlagValue_t flag = RF::template OrHL<Tag>() & (~LowFlag) & obj._rflag.getFlag();
 							if(obj._rflag.template test<Tag>()) {
-								const int nbit = BitCount(flag);
-								obj._counter = 0;
-								ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
-								ASSERT_EQ(nbit, obj._counter);
-
-								obj._sync();
+								if(obj._refr.getTestPattern() == 0) {
+									// 下位の値から算出
+									const auto val = obj._calcValue((Tag*)nullptr);
+									// 最下位の値を除いた更新フラグの数だけカウンタがインクリメントされる(筈)
+									const RFlagValue_t flag = RF::template OrHL<Tag>() & (~LowFlag) & obj._rflag.getFlag();
+									const int nbit = BitCount(flag);
+									obj._counter = 0;
+									ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
+									ASSERT_EQ(nbit, obj._counter);
+									obj._sync();
+								} else {
+									const auto val0 = obj._rflag.template get<Tag>(&obj);
+									obj._sync();
+									// 下位の値から算出
+									const auto val = obj._calcValue((Tag*)nullptr);
+									ASSERT_EQ(val, val0);
+								}
 							} else
 								ASSERT_EQ(obj._value.cref((Tag*)nullptr), obj._rflag.template ref<Tag>());
 						};
@@ -228,10 +280,12 @@ namespace spi {
 				void _sync() {
 					_sync(IConst<0>());
 				}
+				RFRefr<MT, RFObj>	_refr;
 
 			public:
 				RFObj(MT& mt):
-					_mt(mt)
+					_mt(mt),
+					_refr(mt)
 				{
 					_InitFunc();
 					resetAll();
@@ -258,22 +312,22 @@ namespace spi {
 				}
 		};
 		template <class MT>
-		RFlagRet RFObj<MT>::_refresh(typename RFObj::Value01::value_t& dst, RFObj::Value01*) const {
+		bool RFObj<MT>::_refresh(typename RFObj::Value01::value_t& dst, RFObj::Value01*) const {
 			++_counter;
-			dst = getValue0() + getValue1();
-			return {true, 0};
+			_refr.value01(dst, const_cast<RFObj&>(*this));
+			return true;
 		}
 		template <class MT>
-		RFlagRet RFObj<MT>::_refresh(typename RFObj::Value02::value_t& dst, RFObj::Value02*) const {
+		bool RFObj<MT>::_refresh(typename RFObj::Value02::value_t& dst, RFObj::Value02*) const {
 			++_counter;
-			dst = getValue0() - getValue2();
-			return {true, 0};
+			_refr.value02(dst, const_cast<RFObj&>(*this));
+			return true;
 		}
 		template <class MT>
-		RFlagRet RFObj<MT>::_refresh(typename RFObj::Value01_02_3::value_t& dst, RFObj::Value01_02_3*) const {
+		bool RFObj<MT>::_refresh(typename RFObj::Value01_02_3::value_t& dst, RFObj::Value01_02_3*) const {
 			++_counter;
 			dst = getValue01() * getValue02() * getValue3();
-			return {true, 0};
+			return true;
 		}
 		template <class MT>
 		typename RFObj<MT>::ChkFunc RFObj<MT>::s_chkfunc[1 << (ActB + ValB)] = {};
@@ -281,7 +335,8 @@ namespace spi {
 		struct RFlag : Random {};
 		TEST_F(RFlag, General) {
 			auto& mt = this->mt();
-			using RF = RFObj<std::decay_t<decltype(mt)>>;
+			using MT = std::decay_t<decltype(mt)>;
+			using RF = RFObj<MT>;
 			RF obj(mt);
 			using Cache_t = typename RF::Cache_t;
 			using Action = typename RF::Action;
@@ -301,8 +356,6 @@ namespace spi {
 			}
 		}
 
-		//TODO: 他の更新フラグを同時に立てられるケースのチェック
-		//TODO: ユーザーの意図で更新フラグを立てない場合のチェック
 		//TODO: 他クラスとの連携で毎回チェックする変数を含む場合のチェック
 	}
 }

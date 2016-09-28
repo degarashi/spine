@@ -35,10 +35,6 @@ namespace spi {
 	};
 	//! 更新フラグ群を格納する数値型
 	using RFlagValue_t = uint_fast32_t;
-	struct RFlagRet {
-		bool			bRefreshed;		//!< 変数値の更新がされた時はtrue
-		RFlagValue_t	flagOr;			//!< FlagValueのOr差分 (一緒に更新された変数を伝達する時に使用)
-	};
 	//! 各々の値が変更される毎にインクリメントされる値
 	using AcCounter_t = uint_fast32_t;
 	//! 変数が更新された時の累積カウンタの値を後で比較するためのラッパークラス
@@ -121,9 +117,8 @@ namespace spi {
 				base_t* ptr = const_cast<base_t*>(ptrC);
 				constexpr auto TFlag = Get<T>();
 				// 親クラスのRefresh関数を呼ぶ
-				RFlagRet ret = self->_refresh(ptr->ref(_NullPtr<T>()), _NullPtr<T>());
+				const bool ret = self->_refresh(ptr->ref(_NullPtr<T>()), _NullPtr<T>());
 				// 一緒に更新された変数フラグを立てる
-				_rflag |= ret.flagOr;
 				_rflag &= ~TFlag;
 				D_Assert(!(_rflag & (OrHL0<T>() & ~TFlag & ~ACFlag)), "refresh flag was not cleared correctly");
 				// Accumulationクラスを継承している変数は常に更新フラグを立てておく
@@ -133,7 +128,7 @@ namespace spi {
 				// 変数が更新された場合にはsecondに当該変数のフラグを返す
 				return CRef_p<T>(
 							ptrC->cref(_NullPtr<T>()),
-							ret.bRefreshed ? TFlag : 0
+							ret ? TFlag : 0
 						);
 			}
 			//! 上位の変数が使用する下位の変数のフラグを計算 (直下のノードのみ)
@@ -353,10 +348,10 @@ namespace spi {
 			using value_t = decltype(::spi::AcDetect<__VA_ARGS__>((valueT*)nullptr)); };
 	// 中間refresh関数 -> 宣言のみ
 	#define RFLAG_CACHEDVALUE_MIDDLE(name, valueT, ...) \
-		::spi::RFlagRet _refresh(typename name::value_t&, name*) const;
+		bool _refresh(typename name::value_t&, name*) const;
 	// 最下層refresh関数 -> 何もしない
 	#define RFLAG_CACHEDVALUE_LOW(name, valueT) \
-		::spi::RFlagRet _refresh(typename name::value_t&, name*) const { return {true, 0}; }
+		bool _refresh(typename name::value_t&, name*) const { return true; }
 	// ...の部分が単体ならLOWを、それ以外はMIDDLEを呼ぶ
 	#define RFLAG_CACHEDVALUE(name, ...) \
 			RFLAG_CACHEDVALUE_BASE(name, __VA_ARGS__) \
@@ -443,7 +438,7 @@ namespace spi {
 				((Value1)(Type1)(Depends)...)
 			RFLAG_DEFINE(MyClass, SEQ)
 
-			更新関数を RFlagRet _refresh(Type0&, Value0*) const; の形で記述
+			更新関数を bool _refresh(Type0&, Value0*) const; の形で記述
 			public:
 				// 取得用の関数
 				RFLAG_GETMETHOD(Value0)
