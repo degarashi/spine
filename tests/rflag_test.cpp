@@ -4,6 +4,7 @@
 
 namespace spi {
 	namespace test {
+		// 1つのキャッシュ変数の更新が別の変数を同時に計算できる場合のテスト用
 		template <class MT, class R>
 		struct RFRefr {
 			using Types0 = lubee::Types<typename R::Value2, typename R::Value3, typename R::Value02>;
@@ -11,10 +12,12 @@ namespace spi {
 			using TypesC = typename Types0::template Append<Types1>;
 
 			MT&				_mt;
+			// [Types0(Value01が他に及ぼす変数)][Types1(Value02が他に及ぼす変数)]
+			// ビットが立っている場合に更新
 			const uint32_t	_mask;
 			RFRefr(MT& mt):
 				_mt(mt),
-				_mask(mt.template getUniform<uint32_t>({0, TypesC::size-1}))
+				_mask(mt.template getUniform<uint32_t>({0, (1<<TypesC::size)-1}))
 			{}
 
 			uint32_t getTestPattern() const {
@@ -23,27 +26,30 @@ namespace spi {
 			template <int N>
 			using IConst = lubee::IConst<N>;
 
+			// フラグに従って該当するキャッシュ変数にランダム値をセットする
 			template <class Types, class Obj>
-			void _apply(Obj&, IConst<Types::size>, uint32_t) const {}
+			void _rewrite(Obj&, IConst<Types::size>, uint32_t) const {}
 			template <class Types, class Obj, int N, ENABLE_IF((N != Types::size))>
-			void _apply(Obj& obj, IConst<N>, uint32_t mask) const {
+			void _rewrite(Obj& obj, IConst<N>, uint32_t mask) const {
 				using Tag = typename Types::template At<N>;
 				if(mask & 1) {
 					const auto val = _mt.template getUniform<typename Tag::value_t>();
 					obj._rflag.template set<Tag>(val);
 					obj.template _updateSetflag<Tag>();
 				}
-				_apply<Types>(obj, IConst<N+1>(), mask>>1);
+				_rewrite<Types>(obj, IConst<N+1>(), mask>>1);
 			}
 			template <class Dst, class T>
 			void value01(Dst& dst, T& obj) const {
 				dst = obj.getValue0() + obj.getValue1();
-				_apply<Types0>(obj, IConst<0>(), _mask&((1<<Types0::size)-1));
+				// Value02に関わるキャッシュ変数をmaskに従って書き換え
+				_rewrite<Types0>(obj, IConst<0>(), _mask&((1<<Types0::size)-1));
 			}
 			template <class Dst, class T>
 			void value02(Dst& dst, T& obj) const {
 				dst = obj.getValue0() - obj.getValue2();
-				_apply<Types1>(obj, IConst<0>(), _mask>>Types0::size);
+				// Value01に関わるキャッシュ変数をmaskに従って書き換え
+				_rewrite<Types1>(obj, IConst<0>(), _mask>>Types0::size);
 			}
 		};
 
