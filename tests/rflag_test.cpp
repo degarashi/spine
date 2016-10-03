@@ -1,52 +1,9 @@
 #include "test.hpp"
 #include "../rflag.hpp"
+#include "../lubee/bit.hpp"
 
 namespace spi {
 	namespace test {
-		//! 入力値の一番左のビットだけを残す
-		template <class T, ENABLE_IF(std::is_unsigned<T>{})>
-		inline constexpr T BitLowClear(T x) noexcept {
-			T ts = 1;
-			while(ts < T(sizeof(T)*8/2)) {
-				x = x | (x >> ts);
-				ts <<= 1;
-			}
-			return x & ~(x>>1);
-		}
-		//! most significant bit を取得
-		/*! もし入力値が0の場合は0を返す */
-		inline constexpr uint32_t MSB(uint32_t x) noexcept {
-			const char NLRZ_TABLE[33] = "\x1f\x00\x01\x0e\x1c\x02\x16\x0f\x1d\x1a\x03\x05\x0b\x17"
-										"\x07\x10\x1e\x0d\x1b\x15\x19\x04\x0a\x06\x0c\x14\x18\x09"
-										"\x13\x08\x12\x11";
-			x |= 0x01;
-			return NLRZ_TABLE[0x0aec7cd2U * BitLowClear(x) >> 27];
-		}
-		//! ビットが幾つ立っているか数える
-		template <class T, ENABLE_IF(std::is_unsigned<T>{} && (sizeof(T)<=4))>
-		inline constexpr int BitCount(T v) noexcept {
-			T tmp = v & 0xaaaaaaaa;
-			v &= 0x55555555;
-			v = v + (tmp >> 1);
-			tmp = v & 0xcccccccc;
-			v &= 0x33333333;
-			v = v + (tmp >> 2);
-			tmp = v & 0xf0f0f0f0;
-			v &= 0x0f0f0f0f;
-			v = v + (tmp >> 4);
-			tmp = v & 0xff00ff00;
-			v &= 0x00ff00ff;
-			v = v + (tmp >> 8);
-			tmp = v & 0xffff0000;
-			v &= 0x0000ffff;
-			v = v + (tmp >> 16);
-			return v;
-		}
-		template <class T, ENABLE_IF(std::is_unsigned<T>{} && (sizeof(T)==8))>
-		inline constexpr int BitCount(T v) noexcept {
-			return BitCount(uint32_t(v)) + BitCount(uint32_t(v>>32));
-		}
-
 		template <class MT, class R>
 		struct RFRefr {
 			using Types0 = lubee::Types<typename R::Value2, typename R::Value3, typename R::Value02>;
@@ -122,10 +79,10 @@ namespace spi {
 						_Num
 					};
 				};
-				constexpr static int ValW = BitLowClear(static_cast<unsigned int>(Cache_t::size)) << 1,
-									ValB = MSB(ValW),
-									ActW = BitLowClear(static_cast<unsigned int>(Action::_Num)) << 1,
-									ActB = MSB(ActW);
+				constexpr static int ValW = lubee::bit::LowClear(static_cast<unsigned int>(Cache_t::size)) << 1,
+									ValB = lubee::bit::MSB(ValW),
+									ActW = lubee::bit::LowClear(static_cast<unsigned int>(Action::_Num)) << 1,
+									ActB = lubee::bit::MSB(ActW);
 				using RF = std::decay_t<decltype(_rflag)>;
 				constexpr static RFlagValue_t LowFlag = RF::template Get<Value0, Value1, Value2, Value3>();
 
@@ -202,7 +159,7 @@ namespace spi {
 									const auto val = obj._calcValue((Tag*)nullptr);
 									// 最下位の値を除いた更新フラグの数だけカウンタがインクリメントされる(筈)
 									const RFlagValue_t flag = RF::template OrHL<Tag>() & (~LowFlag) & obj._rflag.getFlag();
-									const int nbit = BitCount(flag);
+									const int nbit = lubee::bit::Count(flag);
 									obj._counter = 0;
 									ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
 									ASSERT_EQ(nbit, obj._counter);
