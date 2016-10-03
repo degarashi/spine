@@ -88,11 +88,10 @@ namespace spi {
 			mutable AcCounter_t _accum[sizeof...(Ts)];
 
 			using base_t = ValueHolder<Ts...>;
-			using ct_base = ::lubee::Types<Ts...>;
-
 			//! キャッシュフラグを格納する変数
 			mutable RFlagValue_t _rflag;
-
+		public:
+			using ct_base = ::lubee::Types<Ts...>;
 		private:
 			//! 整数const型
 			template <int N>
@@ -209,6 +208,15 @@ namespace spi {
 			void _setFlag() noexcept {
 				__setFlag<TsA...>(IConst<sizeof...(TsA)>());
 			}
+			//! キャッシュ変数ポインタをstd::tupleにして返す
+			template <int N, class Tup>
+			RFlagValue_t _getAsTuple(const Class* /*self*/, const Tup& /*dst*/) const { return 0; }
+			template <int N, class Tup, class T, class... TsA>
+			RFlagValue_t _getAsTuple(const Class* self, Tup& dst, T*, TsA*... remain) const {
+				auto ret = refresh<T>(self);
+				std::get<N>(dst) = &ret.first;
+				return ret.second | _getAsTuple<N+1>(self, dst, remain...);
+			}
 
 		public:
 			//! 変数型の格納順インデックス
@@ -259,6 +267,18 @@ namespace spi {
 				_rflag = All();
 			}
 			constexpr static RFlagValue_t ACFlag = _CalcAcFlag(ct_base());
+
+			template <class... TsA>
+			struct Cache : std::tuple<cptr_type<TsA>...> {
+				RFlagValue_t	flag;
+			};
+			//! 一度に複数のキャッシュ変数をポインタで取得
+			template <class... TsA>
+			Cache<TsA...> getAsTuple(const Class* self) const {
+				Cache<TsA...> ret;
+				ret.flag = _getAsTuple<0>(self, ret, ((TsA*)nullptr)...);
+				return ret;
+			}
 
 			RFlag() noexcept {
 				resetAll();

@@ -1,6 +1,7 @@
 #include "test.hpp"
 #include "../rflag.hpp"
 #include "../lubee/bit.hpp"
+#include "../lubee/meta/index_sequence.hpp"
 
 namespace spi {
 	namespace test {
@@ -53,6 +54,33 @@ namespace spi {
 			}
 		};
 
+		template <std::size_t N>
+		using SZConst = lubee::SZConst<N>;
+		template <bool A>
+		using BConst = lubee::BConst<A>;
+
+		template <std::size_t Bit, std::size_t N, class A>
+		struct MakeBitArray;
+		template <std::size_t N>
+		struct MakeBitArray<0, N, std::false_type> {
+			using type = std::index_sequence<>;
+		};
+		template <std::size_t Bit, std::size_t N>
+		struct MakeBitArray<Bit, N, std::true_type> {
+			constexpr static auto B0 = Bit>>1,
+								N0 = N+1;
+			using type0 = typename MakeBitArray<B0, N0, BConst<static_cast<bool>(B0&1)>>::type;
+			using type = lubee::seq::Concat_t<std::index_sequence<N>, type0>;
+		};
+		template <std::size_t Bit, std::size_t N>
+		struct MakeBitArray<Bit, N, std::false_type> {
+			constexpr static auto B0 = Bit>>1,
+								N0 = N+1;
+			using type = typename MakeBitArray<B0, N0, BConst<static_cast<bool>(B0&1)>>::type;
+		};
+		template <std::size_t Bit>
+		using MakeBitArray_t = typename MakeBitArray<Bit, 0, BConst<Bit&1>>::type;
+
 		using CTypes = lubee::Types<float,uint32_t,uint64_t,int16_t>;
 		using Value01_t = float;
 		using Value02_t = double;
@@ -76,7 +104,7 @@ namespace spi {
 				RFLAG_DEFINE(RFObj, SEQ)
 
 			public:
-				using Cache_t = lubee::Types<Value0, Value1, Value2, Value3, Value01, Value02, Value01_02_3>;
+				using Cache_t = typename RFlag_t::ct_base;
 				struct Action {
 					enum e {
 						Set,
@@ -127,6 +155,7 @@ namespace spi {
 				// 動作チェック用関数配列: Func[Action | Tag]
 				using ChkFunc = std::function<void (RFObj&)>;
 				static ChkFunc s_chkfunc[1 << (ActB + ValB)];
+				static ChkFunc s_chkgetfunc[1 << Cache_t::size];
 
 			private:
 				template <class Tag>
@@ -215,6 +244,48 @@ namespace spi {
 					if(!s_chkfunc[0])
 						_InitFunc(s_chkfunc, IConst<0>(), IConst<0>());
 				}
+				template <std::size_t... Idx>
+				static auto MakeTypeArray(std::index_sequence<Idx...>) -> lubee::Types<typename Cache_t::template At<Idx>...>;
+				template <class CT>
+				using MakeTypeArray_t = decltype(MakeTypeArray(std::declval<CT>()));
+
+				template <std::size_t N>
+				static void _CheckGetF(RFObj& obj) {
+					obj.getTest<MakeTypeArray_t<MakeBitArray_t<N>>>();
+				}
+				static void _InitGetFunc(ChkFunc*, SZConst<Cache_t::size>) {}
+				template <std::size_t N>
+				static void _InitGetFunc(ChkFunc* dst, SZConst<N>) {
+					*dst = &_CheckGetF<N>;
+					_InitGetFunc(dst+1, SZConst<N+1>());
+				}
+				static void _InitGetFunc() {
+					if(!s_chkgetfunc[0])
+						_InitGetFunc(s_chkgetfunc, SZConst<0>());
+				}
+
+				template <class C, std::size_t N>
+				RFlagValue_t getTestSingle(const C&, SZConst<N>) const { return 0; }
+				template <class C, std::size_t N, class T0, class... Ts>
+				RFlagValue_t getTestSingle(const C& c, SZConst<N>, T0*, Ts*...) const {
+					auto ret = _rflag.template refresh<T0>(this);
+					[&]{
+						ASSERT_EQ(*std::get<N>(c), ret.first);
+					}();
+					return ret.second | getTestSingle(c, SZConst<N+1>(), ((Ts*)nullptr)...);
+				}
+				template <class... Ts>
+				void getTestDual(lubee::Types<Ts...>) const {
+					auto self = *this;
+					auto ret = self._rflag.template getAsTuple<Ts...>(&self);
+					auto flag = getTestSingle(ret, SZConst<0>(), ((Ts*)nullptr)...);
+					ASSERT_FALSE(::testing::Test::HasFatalFailure());
+					ASSERT_EQ(ret.flag, flag);
+				}
+				template <class CT>
+				void getTest() const {
+					getTestDual(CT());
+				}
 
 				// Tのランダム値
 				template <class T>
@@ -251,6 +322,7 @@ namespace spi {
 					_refr(mt)
 				{
 					_InitFunc();
+					_InitGetFunc();
 					resetAll();
 				}
 
@@ -294,6 +366,8 @@ namespace spi {
 		}
 		template <class MT>
 		typename RFObj<MT>::ChkFunc RFObj<MT>::s_chkfunc[1 << (ActB + ValB)] = {};
+		template <class MT>
+		typename RFObj<MT>::ChkFunc RFObj<MT>::s_chkgetfunc[1 << Cache_t::size] = {};
 
 		struct RFlag : Random {};
 		TEST_F(RFlag, General) {
@@ -314,6 +388,11 @@ namespace spi {
 								idAct = mtf({0, Action::_Num-1});
 					const int act = (idAct << RF::ValB) | idVal;
 					ASSERT_NO_FATAL_FAILURE(RF::s_chkfunc[act](obj));
+					// 時々まとめてget関数のチェックを入れる
+					if(mtf({0, 31}) == 0) {
+						const int idget = mtf({0, Cache_t::size-1});
+						ASSERT_NO_FATAL_FAILURE(RF::s_chkgetfunc[idget](obj));
+					}
 				}
 				obj.resetAll();
 			}
