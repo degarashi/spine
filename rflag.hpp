@@ -6,6 +6,15 @@
 #include "lubee/wrapper.hpp"
 
 namespace spi {
+	//! 累積カウンタの比較用
+	template <class T>
+	bool CompareAndSet(T& num, const T& target) {
+		if(num != target) {
+			num = target;
+			return true;
+		}
+		return false;
+	}
 	template <class... Ts>
 	struct ValueHolder {
 		template <class T2>
@@ -48,7 +57,7 @@ namespace spi {
 	class AcWrapper : public CacheVal {
 		public:
 			using CacheVal_t = CacheVal;
-			using Depend_t = std::tuple<Ts...>;
+			using Depend_t = lubee::Types<Ts...>;
 			using Getter_t = Getter;
 			using Counter_t = typename Getter::counter_t;
 			using value_t = typename CacheVal_t::value_t;
@@ -164,7 +173,8 @@ namespace spi {
 				// Accumulationクラスを継承している変数は常に更新フラグを立てておく
 				_rflag |= ACFlag;
 				// 累積カウンタをインクリメント
-				++_accum[GetFlagIndex<T>()];
+				if(ret)
+					++_accum[GetFlagIndex<T>()];
 				// 変数が更新された場合にはsecondに当該変数のフラグを返す
 				return CRef_p<T>(
 							ptrC->cref(_NullPtr<T>()),
@@ -259,6 +269,36 @@ namespace spi {
 				return ret.second | _getAsTuple<N+1>(self, dst, remain...);
 			}
 
+			template <class T, class Acc>
+			RFlagValue_t _getIfFlagDifferent(Acc&, cref_type<T>, const Class*, std::false_type) const { return 0; }
+			template <class T, class Acc>
+			RFlagValue_t _getIfFlagDifferent(Acc& acc, cref_type<T> v, const Class* self, std::true_type) const {
+				using C = typename Acc::Counter_t;
+				using G = typename Acc::Getter_t;
+				// ユーザー定義の累積カウンタ、システム定義(RFlag)の累積カウンタの何れかが異なっていたらキャッシュフラグを返す
+				if(CompareAndSet<C>(acc.template refUserAc<T>(), G()(v, _NullPtr<T>(), *self)) |
+					CompareAndSet(acc.template refAc<T>(), getAcCounter<T>()))
+					return Get<T>();
+				return 0;
+			}
+			template <int N, class Acc, class Tup>
+			RFlagValue_t _getWithCheck(const Class*, const Acc&, const Tup&) const { return 0; }
+			template <int N, class Acc, class Tup, class T, class... TsA>
+			RFlagValue_t _getWithCheck(const Class* self, Acc& acc, Tup& dst, T*, TsA*... remain) const {
+				auto ret = refresh<T>(self);
+				// キャッシュ値のポインタはdstへ
+				std::get<N>(dst) = &ret.first;
+				// refreshがかかるか、累積カウンタが異なっていればキャッシュ値のフラグを返す
+				ret.second |= _getIfFlagDifferent<T>(acc, ret.first, self, typename Acc::Depend_t::template Has<T>());
+				return ret.second | _getWithCheck<N+1>(self, acc, dst, remain...);
+			}
+			template <class Acc, class... TsA>
+			auto _getWithCheck(const Class* self, Acc& acc, lubee::Types<TsA...>) const {
+				Cache<TsA...> ret;
+				ret.flag = _getWithCheck<0>(self, acc, ret, ((TsA*)nullptr)...);
+				return ret;
+			}
+
 		public:
 			//! 変数型の格納順インデックス
 			template <class TA>
@@ -323,6 +363,12 @@ namespace spi {
 				Cache<TsA...> ret;
 				ret.flag = _getAsTuple<0>(self, ret, ((TsA*)nullptr)...);
 				return ret;
+			}
+			// 独自の累積カウンタ
+			//! _refresh()から呼び出す
+			template <class Acc>
+			auto getWithCheck(const Class* self, Acc& acc) const {
+				return _getWithCheck(self, acc, typename Acc::Depend_t());
 			}
 
 			RFlag() noexcept {
@@ -417,7 +463,7 @@ namespace spi {
 		bool _refresh(typename name::value_t&, name*) const;
 	// 最下層refresh関数 -> 何もしない
 	#define RFLAG_CACHEDVALUE_LOW(name, valueT) \
-		bool _refresh(typename name::value_t&, name*) const { return true; }
+		bool _refresh(typename name::value_t&, name*) const { return false; }
 	// ...の部分が単体ならLOWを、それ以外はMIDDLEを呼ぶ
 	#define RFLAG_CACHEDVALUE(name, ...) \
 			RFLAG_CACHEDVALUE_BASE(name, __VA_ARGS__) \
