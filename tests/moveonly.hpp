@@ -1,5 +1,6 @@
 #pragma once
 #include <utility>
+#include "util.hpp"
 
 namespace spi {
 	namespace test {
@@ -54,5 +55,10 @@ namespace spi {
 					ar(_value);
 				}
 		};
+
+		template <class T>
+		void ModifyValue(MoveOnly<T>& t) {
+			ModifyValue(t.get());
+		}
 	}
 }

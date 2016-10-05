@@ -23,25 +23,6 @@ namespace spi {
 		using Types = ::testing::Types<uint8_t, uint64_t, double, MoveOnly<uint64_t>>;
 		TYPED_TEST_CASE(Optional, Types);
 
-		template <class T>
-		T MakeDifferentValue(const T& t) {
-			T tmp = 1,
-			  res = t;
-			do {
-				res += tmp;
-				tmp *= 2;
-			} while(res == t);
-			return res;
-		}
-		template <class T>
-		void ModifyValue(T& t) {
-			t = MakeDifferentValue(t);
-		}
-		template <class T>
-		void ModifyValue(MoveOnly<T>& t) {
-			ModifyValue(t.get());
-		}
-
 		template <class V, class MkValue, ENABLE_IF(!(std::is_copy_assignable<V>{}))>
 		void CheckCopyAssign(MkValue&&) {}
 		template <class V, class MkValue, ENABLE_IF((std::is_copy_assignable<V>{}))>
