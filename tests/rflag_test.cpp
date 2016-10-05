@@ -133,19 +133,21 @@ namespace spi {
 				auto _calcValue(Tag*) const {
 					return AcWrapperValue(_value.cref((Tag*)nullptr));
 				}
-				Value01_t _calcValue(Value01*) const {
+				template <class T>
+				using AcV = std::decay_t<decltype(AcWrapperValue(_value.cref((T*)nullptr)))>;
+				AcV<Value01> _calcValue(Value01*) const {
 					if(_setflag & RF::template Get<Value01>() & ~RF::ACFlag)
 						return _value.cref((Value01*)nullptr);
 					return _calcValue((Value0*)nullptr)
 							+ _calcValue((Value1*)nullptr);
 				}
-				Value02_t _calcValue(Value02*) const {
+				AcV<Value02> _calcValue(Value02*) const {
 					if(_setflag & RF::template Get<Value02>() & ~RF::ACFlag)
 						return _value.cref((Value02*)nullptr);
 					return _calcValue((Value0*)nullptr)
 							- _calcValue((Value2*)nullptr);
 				}
-				Value01_02_3_t _calcValue(Value01_02_3*) const {
+				AcV<Value01_02_3> _calcValue(Value01_02_3*) const {
 					if(_setflag & RF::template Get<Value01_02_3>() & ~RF::ACFlag)
 						return _value.cref((Value01_02_3*)nullptr);
 					return _calcValue((Value01*)nullptr)
@@ -411,10 +413,19 @@ namespace spi {
 							AcCheck<lubee::Wrapper<uint64_t>, Getter>,
 							int16_t
 						>;
-		using C2Types = lubee::Types<float, double>;
+		using C2Types = lubee::Types<
+							float,
+							double
+						>;
+		using C2TypesAc = lubee::Types<
+							AcCheck<lubee::Wrapper<float>, Getter>,
+							double
+						>;
 		using NTypes = ::testing::Types<
 							std::tuple<CTypes, C2Types>,
-							std::tuple<CTypesAc, C2Types>
+							std::tuple<CTypesAc, C2Types>,
+							std::tuple<CTypes, C2TypesAc>,
+							std::tuple<CTypesAc, C2TypesAc>
 						>;
 		TYPED_TEST_CASE(RFlag, NTypes);
 
