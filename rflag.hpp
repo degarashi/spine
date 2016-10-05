@@ -3,6 +3,7 @@
 #include <boost/preprocessor.hpp>
 #include "lubee/meta/typelist.hpp"
 #include "lubee/meta/constant_t.hpp"
+#include "lubee/wrapper.hpp"
 
 namespace spi {
 	template <class... Ts>
@@ -38,40 +39,55 @@ namespace spi {
 	//! 各々の値が変更される毎にインクリメントされる値
 	using AcCounter_t = uint_fast32_t;
 	//! 変数が更新された時の累積カウンタの値を後で比較するためのラッパークラス
-	template <class T, class Getter, class... Ts>
-	class AcWrapper : public T {
+	/*!
+		\tparam	CacheVal	内部キャッシュ値
+		\tparam	Getter		累積カウンタを取得するための関数クラス
+		\tparam	Ts			依存キャッシュ値
+	*/
+	template <class CacheVal, class Getter, class... Ts>
+	class AcWrapper : public CacheVal {
 		public:
-			using Flag_t = std::tuple<Ts...>;
+			using CacheVal_t = CacheVal;
+			using Depend_t = std::tuple<Ts...>;
 			using Getter_t = Getter;
 			using Counter_t = typename Getter::counter_t;
+			using value_t = typename CacheVal_t::value_t;
 		private:
 			mutable AcCounter_t ac_counter[sizeof...(Ts)];
 			mutable Counter_t user_counter[sizeof...(Ts)];
 		public:
 			template <class... Args>
 			explicit AcWrapper(Args&&... args):
-				T(std::forward<Args>(args)...)
+				CacheVal_t(std::forward<Args>(args)...)
 			{
 				for(auto& a : ac_counter)
 					a = ~0;
 				for(auto& a : user_counter)
 					a = ~0;
 			}
-			AcWrapper& operator = (const T& t) {
-				static_cast<T&>(*this) = t;
+			AcWrapper& operator = (const CacheVal_t& t) {
+				static_cast<CacheVal_t&>(*this) = t;
 				return *this;
 			}
-			AcWrapper& operator = (T&& t) {
-				static_cast<T&>(*this) = std::move(t);
+			AcWrapper& operator = (CacheVal_t&& t) {
+				static_cast<CacheVal_t&>(*this) = std::move(t);
 				return *this;
+			}
+			bool operator == (const AcWrapper& w) const noexcept {
+				return static_cast<const CacheVal_t&>(*this) ==
+						static_cast<const CacheVal_t&>(w);
+			}
+			bool operator != (const AcWrapper& w) const noexcept {
+				return static_cast<const CacheVal_t&>(*this) !=
+						static_cast<const CacheVal_t&>(w);
 			}
 			template <class Type>
 			AcCounter_t& refAc() const {
-				return ac_counter[Flag_t::template Find<Type>];
+				return ac_counter[Depend_t::template Find<Type>];
 			}
 			template <class Type>
 			Counter_t& refUserAc() const {
-				return user_counter[Flag_t::template Find<Type>];
+				return user_counter[Depend_t::template Find<Type>];
 			}
 	};
 	//! TがAcWrapperテンプレートクラスかをチェック
@@ -79,6 +95,31 @@ namespace spi {
 	struct IsAcWrapper : std::false_type {};
 	template <class... Ts>
 	struct IsAcWrapper<AcWrapper<Ts...>> : std::true_type {};
+	template <class T>
+	inline decltype(auto) AcWrapperValue(const T& v, std::true_type) noexcept {
+		return lubee::wrapper_value(static_cast<const typename T::CacheVal_t&>(v));
+	}
+	template <class T>
+	inline decltype(auto) AcWrapperValue(const T& v, std::false_type) noexcept {
+		return v;
+	}
+	template <class T>
+	inline decltype(auto) AcWrapperValue(const T& v) noexcept {
+		return AcWrapperValue(v, IsAcWrapper<T>());
+	}
+
+	//! 毎フレームの更新チェックが必要な際に使うキャッシュ変数ラッパー
+	/*!
+		\tparam	CacheVal	内部キャッシュ値
+		\tparam	Getter		累積カウンタを取得するための関数クラス
+	*/
+	template <class CacheVal, class Getter>
+	struct AcCheck {};
+	// AcCheckを継承していればAcWrapperを、そうでなければTを返す
+	template <class... Ts, class CacheVal, class Getter>
+	AcWrapper<CacheVal, Getter, Ts...> AcDetect(AcCheck<CacheVal, Getter>*);
+	template <class... Ts, class T>
+	T AcDetect(T*);
 
 	//! キャッシュ変数の自動管理クラス
 	template <class Class, class... Ts>
@@ -271,6 +312,10 @@ namespace spi {
 			template <class... TsA>
 			struct Cache : std::tuple<cptr_type<TsA>...> {
 				RFlagValue_t	flag;
+
+				explicit operator bool() const {
+					return flag != 0;
+				}
 			};
 			//! 一度に複数のキャッシュ変数をポインタで取得
 			template <class... TsA>
@@ -337,13 +382,14 @@ namespace spi {
 				return refresh<T>(self).first;
 			}
 	};
-	template <class Base, class Getter>
-	struct AcCheck {};
-	// AcCheckを継承していればAcWrapperを、そうでなければTを返す
-	template <class... Ts, class Base, class Getter>
-	static AcWrapper<Base, Getter, Ts...> AcDetect(AcCheck<Base, Getter>*);
-	template <class... Ts, class T>
-	static T AcDetect(T*);
+	template <class C>
+	struct RFlag_Getter {
+		using counter_t = C;
+		template <class Value, class Tag, class Self>
+		counter_t operator()(const Value&, Tag*, const Self&) const {
+			return 0;
+		}
+	};
 
 	#define PASS_THROUGH(func, ...)		func(__VA_ARGS__)
 	#define SEQ_GETFIRST(z, data, elem)	(BOOST_PP_SEQ_ELEM(0,elem))

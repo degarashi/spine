@@ -5,6 +5,8 @@
 
 namespace spi {
 	namespace test {
+		template <class T>
+		using GetRaw_t = std::decay_t<decltype(AcWrapperValue(std::declval<T>()))>;
 		// 1つのキャッシュ変数の更新が別の変数を同時に計算できる場合のテスト用
 		template <class MT, class R>
 		struct RFRefr {
@@ -34,7 +36,7 @@ namespace spi {
 			void _rewrite(Obj& obj, IConst<N>, uint32_t mask) const {
 				using Tag = typename Types::template At<N>;
 				if(mask & 1) {
-					const auto val = _mt.template getUniform<typename Tag::value_t>();
+					const auto val = _mt.template getUniform<GetRaw_t<typename Tag::value_t>>();
 					obj._rflag.template set<Tag>(val);
 					obj.template _updateSetflag<Tag>();
 				}
@@ -42,13 +44,14 @@ namespace spi {
 			}
 			template <class Dst, class T>
 			void value01(Dst& dst, T& obj) const {
-				dst = obj.getValue0() + obj.getValue1();
+				using lubee::wrapper_value;
+				dst = AcWrapperValue(obj.getValue0()) + AcWrapperValue(obj.getValue1());
 				// Value02に関わるキャッシュ変数をmaskに従って書き換え
 				_rewrite<Types0>(obj, IConst<0>(), _mask&((1<<Types0::size)-1));
 			}
 			template <class Dst, class T>
 			void value02(Dst& dst, T& obj) const {
-				dst = obj.getValue0() - obj.getValue2();
+				dst = AcWrapperValue(obj.getValue0()) - AcWrapperValue(obj.getValue2());
 				// Value01に関わるキャッシュ変数をmaskに従って書き換え
 				_rewrite<Types1>(obj, IConst<0>(), _mask>>Types0::size);
 			}
@@ -81,11 +84,7 @@ namespace spi {
 		template <std::size_t Bit>
 		using MakeBitArray_t = typename MakeBitArray<Bit, 0, BConst<Bit&1>>::type;
 
-		using CTypes = lubee::Types<float,uint32_t,uint64_t,int16_t>;
-		using Value01_t = float;
-		using Value02_t = double;
-		using Value01_02_3_t = int32_t;
-		template <class MT>
+		template <class MT, class BaseT, class InterT>
 		class RFObj {
 			template <class, class>
 			friend struct RFRefr;
@@ -93,11 +92,14 @@ namespace spi {
 				template <int N>
 				using IConst = lubee::IConst<N>;
 
+				using Value01_t = typename InterT::template At<0>;
+				using Value02_t = typename InterT::template At<1>;
+				using Value01_02_3_t = int32_t;
 				#define SEQ \
-					((Value0)(CTypes::template At<0>)) \
-					((Value1)(CTypes::template At<1>)) \
-					((Value2)(CTypes::template At<2>)) \
-					((Value3)(CTypes::template At<3>)) \
+					((Value0)(typename BaseT::template At<0>)) \
+					((Value1)(typename BaseT::template At<1>)) \
+					((Value2)(typename BaseT::template At<2>)) \
+					((Value3)(typename BaseT::template At<3>)) \
 					((Value01)(Value01_t)(Value0)(Value1)) \
 					((Value02)(Value02_t)(Value0)(Value2)) \
 					((Value01_02_3)(Value01_02_3_t)(Value01)(Value02)(Value3))
@@ -129,22 +131,22 @@ namespace spi {
 
 				template <class Tag>
 				auto _calcValue(Tag*) const {
-					return _value.cref((Tag*)nullptr);
+					return AcWrapperValue(_value.cref((Tag*)nullptr));
 				}
 				Value01_t _calcValue(Value01*) const {
-					if(_setflag & RF::template Get<Value01>())
+					if(_setflag & RF::template Get<Value01>() & ~RF::ACFlag)
 						return _value.cref((Value01*)nullptr);
 					return _calcValue((Value0*)nullptr)
 							+ _calcValue((Value1*)nullptr);
 				}
 				Value02_t _calcValue(Value02*) const {
-					if(_setflag & RF::template Get<Value02>())
+					if(_setflag & RF::template Get<Value02>() & ~RF::ACFlag)
 						return _value.cref((Value02*)nullptr);
 					return _calcValue((Value0*)nullptr)
 							- _calcValue((Value2*)nullptr);
 				}
 				Value01_02_3_t _calcValue(Value01_02_3*) const {
-					if(_setflag & RF::template Get<Value01_02_3>())
+					if(_setflag & RF::template Get<Value01_02_3>() & ~RF::ACFlag)
 						return _value.cref((Value01_02_3*)nullptr);
 					return _calcValue((Value01*)nullptr)
 							* _calcValue((Value02*)nullptr)
@@ -162,7 +164,7 @@ namespace spi {
 				void _updateSetflag() {
 					_setflag &= ~RF::template OrLH<Tag>();
 					_setflag |= RF::template Get<Tag>();
-					ASSERT_EQ(0, _setflag & _rflag.getFlag() & ~LowFlag);
+					ASSERT_EQ(0, _setflag & _rflag.getFlag() & ~LowFlag & ~RF::ACFlag);
 				}
 				// Set<Tag>の動作をチェック
 				template <class Tag>
@@ -173,11 +175,13 @@ namespace spi {
 							const auto val = obj.template _genValue<typename Tag::value_t>();
 							// セット後に値を比較
 							obj._rflag.template set<Tag>(val);
-							obj._counter = 0;
 							ASSERT_EQ(val, obj._rflag.template ref<Tag>());
-							// セットした値を取得しても更新はかからない
-							ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
-							ASSERT_EQ(0, obj._counter);
+							if(!(RF::ACFlag & RF::template Get<Tag>())) {
+								// セットした値を取得しても更新はかからない
+								obj._counter = 0;
+								ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
+								ASSERT_EQ(0, obj._counter);
+							}
 
 							ASSERT_NO_FATAL_FAILURE(obj._updateSetflag<Tag>());
 							obj._sync();
@@ -217,13 +221,29 @@ namespace spi {
 						[](RFObj& obj){
 							// 適当に値を生成
 							const auto val = obj.template _genValue<typename Tag::value_t>();
-							obj._rflag.template refF<Tag>() = val;
-							obj._counter = 0;
-							// セットした値がそのまま取り出せるか
-							ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
-							// セットした箇所なので更新はかからない
-							ASSERT_EQ(0, obj._counter);
-
+							constexpr auto Flag = RF::template Get<Tag>();
+							if(Flag & RF::ACFlag) {
+								if(obj._refr.getTestPattern() == 0) {
+									// 常に更新される変数に対するテスト
+									const auto prev = obj._rflag.template get<Tag>(&obj);
+									obj._rflag.template ref<Tag>() = val;
+									const auto cur = obj._rflag.template get<Tag>(&obj);
+									if(Flag & LowFlag) {
+										// 最下層の変数はrefで指定した値に書き換わる
+										ASSERT_EQ(val, cur);
+									} else {
+										// 中間層の変数はrefで何を指定しても無意味
+										ASSERT_EQ(prev, cur);
+									}
+								}
+							} else {
+								obj._rflag.template refF<Tag>() = val;
+								obj._counter = 0;
+								// セットした値がそのまま取り出せるか
+								ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
+								// セットした箇所なので更新はかからない
+								ASSERT_EQ(0, obj._counter);
+							}
 							ASSERT_NO_FATAL_FAILURE(obj._updateSetflag<Tag>());
 							obj._sync();
 						};
@@ -289,8 +309,8 @@ namespace spi {
 
 				// Tのランダム値
 				template <class T>
-				T _genValue() {
-					return _mt.template getUniform<T>();
+				auto _genValue() {
+					return _mt.template getUniform<GetRaw_t<T>>();
 				}
 
 				// キャッシュ値を全てゼロで初期化
@@ -346,39 +366,65 @@ namespace spi {
 					_init(IConst<0>());
 				}
 		};
-		template <class MT>
-		bool RFObj<MT>::_refresh(typename RFObj::Value01::value_t& dst, RFObj::Value01*) const {
+		template <class MT, class BaseT, class InterT>
+		bool RFObj<MT, BaseT, InterT>::_refresh(typename RFObj::Value01::value_t& dst, RFObj::Value01*) const {
 			++_counter;
 			_refr.value01(dst, const_cast<RFObj&>(*this));
 			return true;
 		}
-		template <class MT>
-		bool RFObj<MT>::_refresh(typename RFObj::Value02::value_t& dst, RFObj::Value02*) const {
+		template <class MT, class BaseT, class InterT>
+		bool RFObj<MT, BaseT, InterT>::_refresh(typename RFObj::Value02::value_t& dst, RFObj::Value02*) const {
 			++_counter;
 			_refr.value02(dst, const_cast<RFObj&>(*this));
 			return true;
 		}
-		template <class MT>
-		bool RFObj<MT>::_refresh(typename RFObj::Value01_02_3::value_t& dst, RFObj::Value01_02_3*) const {
+		template <class MT, class BaseT, class InterT>
+		bool RFObj<MT, BaseT, InterT>::_refresh(typename RFObj::Value01_02_3::value_t& dst, RFObj::Value01_02_3*) const {
 			++_counter;
 			dst = getValue01() * getValue02() * getValue3();
 			return true;
 		}
-		template <class MT>
-		typename RFObj<MT>::ChkFunc RFObj<MT>::s_chkfunc[1 << (ActB + ValB)] = {};
-		template <class MT>
-		typename RFObj<MT>::ChkFunc RFObj<MT>::s_chkgetfunc[1 << Cache_t::size] = {};
+		template <class MT, class BaseT, class InterT>
+		typename RFObj<MT, BaseT, InterT>::ChkFunc RFObj<MT, BaseT, InterT>::s_chkfunc[1 << (ActB + ValB)] = {};
+		template <class MT, class BaseT, class InterT>
+		typename RFObj<MT, BaseT, InterT>::ChkFunc RFObj<MT, BaseT, InterT>::s_chkgetfunc[1 << Cache_t::size] = {};
 
-		struct RFlag : Random {};
-		TEST_F(RFlag, General) {
+		template <class T>
+		struct RFlag : Random {
+			using BaseT = std::tuple_element_t<0,T>;
+			using InterT = std::tuple_element_t<1,T>;
+			using MT = std::decay_t<decltype(std::declval<Random>().mt())>;
+			using RF = RFObj<MT, BaseT, InterT>;
+		};
+
+		struct Getter : RFlag_Getter<uint32_t> {
+			using RFlag_Getter::operator ();
+			template <class C, class Self>
+			counter_t operator()(const C& c, typename Self::Value0*, const Self&) const {
+				return static_cast<counter_t>(c);
+			}
+		};
+		using CTypes = lubee::Types<float,uint32_t,uint64_t,int16_t>;
+		using CTypesAc = lubee::Types<
+							AcCheck<lubee::Wrapper<float>, Getter>,
+							uint32_t,
+							AcCheck<lubee::Wrapper<uint64_t>, Getter>,
+							int16_t
+						>;
+		using C2Types = lubee::Types<float, double>;
+		using NTypes = ::testing::Types<
+							std::tuple<CTypes, C2Types>,
+							std::tuple<CTypesAc, C2Types>
+						>;
+		TYPED_TEST_CASE(RFlag, NTypes);
+
+		TYPED_TEST(RFlag, General) {
+			USING(RF);
 			auto& mt = this->mt();
-			using MT = std::decay_t<decltype(mt)>;
-			using RF = RFObj<MT>;
 			RF obj(mt);
 			using Cache_t = typename RF::Cache_t;
 			using Action = typename RF::Action;
-
-			const auto mtf = mt.getUniformF<int>();
+			const auto mtf = mt.template getUniformF<int>();
 			const int NReset = mtf({1, 8});
 			for(int k=0 ; k<NReset ; k++) {
 				const int N = mtf({0, 128});
@@ -397,7 +443,5 @@ namespace spi {
 				obj.resetAll();
 			}
 		}
-
-		//TODO: 他クラスとの連携で毎回チェックする変数を含む場合のチェック
 	}
 }
