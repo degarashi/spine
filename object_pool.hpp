@@ -6,11 +6,6 @@
 #include "lubee/error.hpp"
 #include <cstring>
 
-#ifdef DEBUG
-	#define NOEXCEPT_IF_RELEASE
-#else
-	#define NOEXCEPT_IF_RELEASE noexcept
-#endif
 #ifdef OBJECT_POOL_CHECKBLOCK
 	#define CallCheckBlock() checkBlock()
 #else
