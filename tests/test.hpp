@@ -1,9 +1,6 @@
 #pragma once
 #include "../lubee/random.hpp"
 #include "../lubee/check_serialization.hpp"
-#include <gtest/gtest.h>
-#include <cereal/archives/json.hpp>
-#include <cereal/archives/binary.hpp>
 
 namespace spi {
 	namespace test {
