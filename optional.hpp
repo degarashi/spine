@@ -1,11 +1,13 @@
 #pragma once
 #include "detect_type.hpp"
 #include "lubee/meta/enable_if.hpp"
+#include "lubee/none.hpp"
 #include <utility>
 #include <cereal/cereal.hpp>
 
 namespace spi {
-	const static struct none_t{} none;
+	using none_t = lubee::none_t;
+	const static none_t none;
 
 	template <class P>
 	using IsRP = std::integral_constant<bool, std::is_reference<P>{} || std::is_pointer<P>{}>;
