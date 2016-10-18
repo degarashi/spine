@@ -9,15 +9,15 @@ namespace spi {
 		中身の保持はすべてスマートポインタで行う
 		シングルスレッド動作
 	*/
-	template <class T>
-	class ResMgr : public Singleton<ResMgr<T>> {
+	template <class T, class Der>
+	class ResMgr : public Singleton<Der> {
 		public:
 			template <class M>
 			friend struct ResDeleter;
 			using value_t = T;
 			using shared_t = std::shared_ptr<value_t>;
 		private:
-			using this_t = ResMgr<T>;
+			using this_t = ResMgr<T,Der>;
 			using tag_t = ResTag<value_t>;
 			using Resource = std::unordered_set<tag_t>;
 			Resource	_resource;

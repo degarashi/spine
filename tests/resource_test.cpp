@@ -7,7 +7,8 @@ namespace spi {
 	namespace test {
 		template <class T>
 		struct ResourceMgr : Random {
-			ResMgr<T>	_mgr;
+			struct RM : ResMgr<T, RM> {};
+			RM		_mgr;
 			using value_t = typename T::value_t;
 			using res_t = typename decltype(_mgr)::shared_t;
 
