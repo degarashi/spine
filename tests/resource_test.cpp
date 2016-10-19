@@ -18,6 +18,19 @@ namespace spi {
 		using Types = ::testing::Types<TestObj<int>, TestObj<double>>;
 		TYPED_TEST_CASE(ResourceMgr, Types);
 
+		TYPED_TEST(ResourceMgr, Serialization) {
+			USING(value_t);
+			// ランダムな数、要素を追加
+			auto& mgr = this->getMgr();
+			const auto mtf = this->mt().template getUniformF<int>();
+			const auto rv = this->mt().template getUniformF<value_t>();
+			const int n = mtf({0,100});
+			for(int i=0 ; i<n ; i++) {
+				mgr.acquire(rv());
+			}
+			lubee::CheckSerialization(mgr);
+		}
+
 		struct Action {
 			enum e {
 				Acquire,
@@ -94,6 +107,18 @@ namespace spi {
 		using NTypes = ::testing::Types<TestObj<int>>;
 		TYPED_TEST_CASE(ResourceMgrName, NTypes);
 
+		TYPED_TEST(ResourceMgrName, Serialization) {
+			USING(value_t);
+			// ランダムな数、要素を追加
+			auto& mgr = this->getMgr();
+			const auto mtf = this->mt().template getUniformF<int>();
+			const auto rv = this->mt().template getUniformF<value_t>();
+			const int n = mtf({0,100});
+			for(int i=0 ; i<n ; i++) {
+				mgr.acquire(lubee::random::GenAlphabetString(mtf, 16), rv());
+			}
+			lubee::CheckSerialization(mgr);
+		}
 		struct ActionN {
 			enum e {
 				Acquire,

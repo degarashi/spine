@@ -2,7 +2,10 @@
 #include "singleton.hpp"
 #include "restag.hpp"
 #include "optional.hpp"
-#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/utility.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/memory.hpp>
 
 namespace spi {
 	//! 名前付きリソースマネージャ
@@ -39,6 +42,30 @@ namespace spi {
 			using DeleteF = std::function<void (value_t*)>;
 			const DeleteF	_deleter;
 
+			friend class cereal::access;
+			using NVPair = std::vector<std::pair<key_t, shared_t>>;
+			template <class Ar>
+			void load(Ar& ar) {
+				// shared_ptrとして読み取る
+				NVPair nv;
+				ar(nv);
+
+				_resource.clear();
+				_v2k.clear();
+				for(auto& n : nv) {
+					auto ret = _resource.emplace(n.first, n.second);
+					_v2k[n.second.get()] = n.first;
+				}
+			}
+			template <class Ar>
+			void save(Ar& ar) const {
+				// 一旦shared_ptrに変換
+				NVPair nv;
+				for(auto& r : _resource)
+					nv.emplace_back(r.first, r.second.weak.lock());
+				ar(nv);
+			}
+
 		protected:
 			//! 継承先のクラスでキーの改変をする必要があればこれをオーバーライドする
 			virtual void _modifyResourceName(key_t& /*key*/) const {}
@@ -49,10 +76,23 @@ namespace spi {
 					this->_release(p);
 				})
 			{}
-			template <class Ar>
-			void serialize(Ar& ar) {
-				ar(_resource);
-				//FIXME: _v2kの復元
+			// (主にデバッグ用)
+			bool operator == (const ResMgrName& m) const noexcept {
+				if(_resource.size() == m._resource.size()) {
+					auto itr0 = _resource.begin(),
+						 itr1 = m._resource.begin();
+					while(itr0 != _resource.end()) {
+						if(*itr0 != *itr1)
+							return false;
+						++itr0;
+						++itr1;
+					}
+					return true;
+				}
+				return false;
+			}
+			bool operator != (const ResMgrName& m) const noexcept {
+				return !(this->operator == (m));
 			}
 			template <class... Ts>
 			auto acquire(const key_t& k, Ts&&... ts) {

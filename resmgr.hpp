@@ -1,7 +1,8 @@
 #pragma once
 #include "restag.hpp"
 #include "singleton.hpp"
-#include <cereal/types/unordered_set.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
 
 namespace spi {
 	//! 名前無しリソースマネージャ
@@ -31,15 +32,50 @@ namespace spi {
 			using DeleteF = std::function<void (value_t*)>;
 			const DeleteF	_deleter;
 
+			using SPV = std::vector<shared_t>;
+			friend class cereal::access;
+			template <class Ar>
+			void save(Ar& ar) const {
+				// 一旦shared_ptrに変換
+				SPV spv;
+				for(auto& r : _resource)
+					spv.emplace_back(r.weak.lock());
+				ar(spv);
+			}
+			template <class Ar>
+			void load(Ar& ar) {
+				// shared_ptrとして読み取る
+				SPV spv;
+				ar(spv);
+
+				_resource.clear();
+				for(auto& s : spv)
+					_resource.emplace(s);
+			}
+
 		public:
 			ResMgr():
 				_deleter([this](value_t* p){
 					this->_release(p);
 				})
 			{}
-			template <class Ar>
-			void serialize(Ar& ar) {
-				ar(_resource);
+			// (主にデバッグ用)
+			bool operator == (const ResMgr& m) const noexcept {
+				if(_resource.size() == m._resource.size()) {
+					auto itr0 = _resource.begin(),
+						 itr1 = m._resource.begin();
+					while(itr0 != _resource.end()) {
+						if(*itr0 != *itr1)
+							return false;
+						++itr0;
+						++itr1;
+					}
+					return true;
+				}
+				return false;
+			}
+			bool operator != (const ResMgr& m) const noexcept {
+				return !(this->operator == (m));
 			}
 			template <class... Ts>
 			auto acquire(Ts&&... ts) {

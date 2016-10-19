@@ -10,10 +10,6 @@ namespace spi {
 		const value_t*	ptr;
 		weak_t			weak;
 
-		template <class Ar>
-		void serialize(Ar& ar) {
-			ar(weak);
-		}
 		ResTag(const shared_t& sp):
 			ptr(sp.get()),
 			weak(sp)

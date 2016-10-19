@@ -22,6 +22,16 @@ namespace spi {
 			private:
 				value_t _value;
 				static int s_counter;
+
+				friend class cereal::access;
+				template <class Ar>
+				value_t save_minimal(Ar&) const {
+					return _value;
+				}
+				template <class Ar>
+				void load_minimal(const Ar&, const value_t& v) {
+					_value = v;
+				}
 			public:
 				TestObj(TestObj&&) = default;
 				TestObj(const TestObj&) = delete;
