@@ -71,7 +71,17 @@ namespace spi {
 
 		template <class T>
 		struct ResourceMgrName : Random {
-			using rmgr_t = ResMgrName<T>;
+			class RM : public ResMgrName<T> {
+				private:
+					using base_t = ResMgrName<T>;
+				public:
+					// キー名は全て大文字にする
+					void _modifyResourceName(typename base_t::key_t& key) const override {
+						for(auto& c : key)
+							c = std::toupper(c);
+					}
+			};
+			using rmgr_t = RM;
 			rmgr_t	_mgr;
 			using value_t = typename T::value_t;
 			using res_t = typename rmgr_t::shared_t;
@@ -125,7 +135,9 @@ namespace spi {
 						// 新たにリソースを確保
 						const auto val = rv();
 						const auto key = lubee::random::GenAlphabetString(mtf, 16);
-						res.emplace(key, Res{key, mgr.acquire(key, val), val});
+						auto tk(key);
+						mgr._modifyResourceName(tk);
+						res.emplace(tk, Res{key, mgr.acquire(key, val), val});
 						break;
 					}
 					case ActionN::Release:

@@ -39,6 +39,10 @@ namespace spi {
 			using DeleteF = std::function<void (value_t*)>;
 			const DeleteF	_deleter;
 
+		protected:
+			//! 継承先のクラスでキーの改変をする必要があればこれをオーバーライドする
+			virtual void _modifyResourceName(key_t& /*key*/) const {}
+
 		public:
 			ResMgrName():
 				_deleter([this](value_t* p){
@@ -52,13 +56,15 @@ namespace spi {
 			}
 			template <class... Ts>
 			auto acquire(const key_t& k, Ts&&... ts) {
+				key_t tk(k);
+				_modifyResourceName(tk);
 				// 既に同じ名前でリソースを確保済みならばそれを返す
-				if(auto ret = get(k))
+				if(auto ret = get(tk))
 					return ret;
 				// 新しくリソースを作成
 				shared_t p(new value_t(std::forward<Ts>(ts)...), _deleter);
-				_resource.emplace(k, p);
-				_v2k.emplace(p.get(), k);
+				_resource.emplace(tk, p);
+				_v2k.emplace(p.get(), tk);
 				return p;
 			}
 			Optional<const key_t&> getKey(const shared_t& p) const {
@@ -71,7 +77,8 @@ namespace spi {
 				return none;
 			}
 			shared_t get(const key_t& k) {
-				const auto itr = _resource.find(k);
+				key_t tk(k);
+				const auto itr = _resource.find(tk);
 				if(itr != _resource.end()) {
 					shared_t ret(itr->second.weak.lock());
 					D_Assert0(ret);
