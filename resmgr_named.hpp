@@ -95,17 +95,17 @@ namespace spi {
 				return !(this->operator == (m));
 			}
 			template <class... Ts>
-			auto acquire(const key_t& k, Ts&&... ts) {
+			std::pair<shared_t, bool> acquire(const key_t& k, Ts&&... ts) {
 				key_t tk(k);
 				_modifyResourceName(tk);
 				// 既に同じ名前でリソースを確保済みならばそれを返す
 				if(auto ret = get(tk))
-					return ret;
+					return std::make_pair(ret, false);
 				// 新しくリソースを作成
 				shared_t p(new value_t(std::forward<Ts>(ts)...), _deleter);
 				_resource.emplace(tk, p);
 				_v2k.emplace(p.get(), tk);
-				return p;
+				return std::make_pair(p, true);
 			}
 			Optional<const key_t&> getKey(const shared_t& p) const {
 				return getKey(p.get());

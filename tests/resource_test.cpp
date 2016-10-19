@@ -162,7 +162,9 @@ namespace spi {
 						const auto key = lubee::random::GenAlphabetString(mtf, 16);
 						auto tk(key);
 						mgr._modifyResourceName(tk);
-						res.emplace(tk, Res{key, mgr.acquire(key, val), val});
+						const auto r = mgr.acquire(key, val);
+						ASSERT_TRUE(r.second);
+						res.emplace(tk, Res{key, r.first, val});
 						break;
 					}
 					case ActionN::Release:
@@ -177,7 +179,8 @@ namespace spi {
 							// 同じポインタが返ってくればOK
 							const auto itr = pickRandom();
 							const auto r = mgr.acquire(itr->first, rv());
-							ASSERT_EQ(itr->second.res.get(), r.get());
+							ASSERT_FALSE(r.second);
+							ASSERT_EQ(itr->second.res.get(), r.first.get());
 						}
 						break;
 					case ActionN::FindByName:
