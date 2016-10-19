@@ -11,13 +11,11 @@ namespace spi {
 		シングルスレッド動作
 	*/
 	template <class T, class K=std::string>
-	class ResMgrName : public Singleton<ResMgrName<T,K>> {
+	class ResMgrName {
 		public:
 			using value_t = T;
 			using shared_t = std::shared_ptr<value_t>;
 			using key_t = K;
-			template <class M>
-			friend struct ResDeleter;
 		private:
 			using this_t = ResMgrName<T,K>;
 			using tag_t = ResTag<value_t>;
@@ -38,10 +36,19 @@ namespace spi {
 				} catch(...) {}
 			}
 
+			using DeleteF = std::function<void (value_t*)>;
+			const DeleteF	_deleter;
+
 		public:
+			ResMgrName():
+				_deleter([this](value_t* p){
+					this->_release(p);
+				})
+			{}
 			template <class Ar>
 			void serialize(Ar& ar) {
 				ar(_resource);
+				//FIXME: _v2kの復元
 			}
 			template <class... Ts>
 			auto acquire(const key_t& k, Ts&&... ts) {
@@ -49,7 +56,7 @@ namespace spi {
 				if(auto ret = get(k))
 					return ret;
 				// 新しくリソースを作成
-				shared_t p(new value_t(std::forward<Ts>(ts)...), ResDeleter<this_t>());
+				shared_t p(new value_t(std::forward<Ts>(ts)...), _deleter);
 				_resource.emplace(k, p);
 				_v2k.emplace(p.get(), k);
 				return p;

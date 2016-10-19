@@ -29,12 +29,6 @@ namespace spi {
 			return !(operator ==(t));
 		}
 	};
-	template <class M>
-	struct ResDeleter {
-		void operator()(typename M::value_t* p) const noexcept {
-			M::ref()._release(p);
-		}
-	};
 }
 namespace std {
 	template <class T>

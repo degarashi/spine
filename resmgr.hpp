@@ -9,15 +9,13 @@ namespace spi {
 		中身の保持はすべてスマートポインタで行う
 		シングルスレッド動作
 	*/
-	template <class T, class Der>
-	class ResMgr : public Singleton<Der> {
+	template <class T>
+	class ResMgr {
 		public:
-			template <class M>
-			friend struct ResDeleter;
 			using value_t = T;
 			using shared_t = std::shared_ptr<value_t>;
 		private:
-			using this_t = ResMgr<T,Der>;
+			using this_t = ResMgr<T>;
 			using tag_t = ResTag<value_t>;
 			using Resource = std::unordered_set<tag_t>;
 			Resource	_resource;
@@ -30,15 +28,22 @@ namespace spi {
 					p->~value_t();
 				} catch(...) {}
 			}
+			using DeleteF = std::function<void (value_t*)>;
+			const DeleteF	_deleter;
 
 		public:
+			ResMgr():
+				_deleter([this](value_t* p){
+					this->_release(p);
+				})
+			{}
 			template <class Ar>
 			void serialize(Ar& ar) {
 				ar(_resource);
 			}
 			template <class... Ts>
 			auto acquire(Ts&&... ts) {
-				shared_t p(new value_t(std::forward<Ts>(ts)...), ResDeleter<this_t>());
+				shared_t p(new value_t(std::forward<Ts>(ts)...), _deleter);
 				// リソース管理のためのリスト登録
 				_resource.emplace(p.get());
 				return p;
