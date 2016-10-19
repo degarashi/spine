@@ -94,18 +94,24 @@ namespace spi {
 			bool operator != (const ResMgrName& m) const noexcept {
 				return !(this->operator == (m));
 			}
-			template <class... Ts>
-			std::pair<shared_t, bool> acquire(const key_t& k, Ts&&... ts) {
+			template <class Make>
+			std::pair<shared_t, bool> acquireWithMake(const key_t& k, Make&& make) {
 				key_t tk(k);
 				_modifyResourceName(tk);
 				// 既に同じ名前でリソースを確保済みならばそれを返す
 				if(auto ret = get(tk))
 					return std::make_pair(ret, false);
 				// 新しくリソースを作成
-				shared_t p(new value_t(std::forward<Ts>(ts)...), _deleter);
+				shared_t p(make(), _deleter);
 				_resource.emplace(tk, p);
 				_v2k.emplace(p.get(), tk);
 				return std::make_pair(p, true);
+			}
+			template <class... Ts>
+			std::pair<shared_t, bool> acquire(const key_t& k, Ts&&... ts) {
+				return acquireWithMake(k, [&ts...](){
+					return new value_t(std::forward<Ts>(ts)...);
+				});
 			}
 			Optional<const key_t&> getKey(const shared_t& p) const {
 				return getKey(p.get());

@@ -94,9 +94,10 @@ namespace spi {
 							c = std::toupper(c);
 					}
 			};
+			using rawvalue_t = T;
 			using rmgr_t = RM;
 			rmgr_t	_mgr;
-			using value_t = typename T::value_t;
+			using value_t = typename rawvalue_t::value_t;
 			using res_t = typename rmgr_t::shared_t;
 			using key_t = typename rmgr_t::key_t;
 
@@ -133,6 +134,7 @@ namespace spi {
 			USING(key_t);
 			USING(res_t);
 			USING(value_t);
+			USING(rawvalue_t);
 			InitializeCounter<TypeParam>();
 
 			struct Res {
@@ -162,7 +164,19 @@ namespace spi {
 						const auto key = lubee::random::GenAlphabetString(mtf, 16);
 						auto tk(key);
 						mgr._modifyResourceName(tk);
-						const auto r = mgr.acquire(key, val);
+						std::pair<res_t,bool> r;
+						if(mtf({0,1}))
+							r = mgr.acquire(key, val);
+						else {
+							bool flag = false;
+							r = mgr.acquireWithMake(key,
+									[&flag, val](){
+										flag = true;
+										return new rawvalue_t(val);
+									}
+								);
+							ASSERT_TRUE(flag);
+						}
 						ASSERT_TRUE(r.second);
 						res.emplace(tk, Res{key, r.first, val});
 						break;
