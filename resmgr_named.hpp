@@ -107,11 +107,15 @@ namespace spi {
 				_v2k.emplace(p.get(), tk);
 				return std::make_pair(p, true);
 			}
-			template <class... Ts>
-			std::pair<shared_t, bool> acquire(const key_t& k, Ts&&... ts) {
+			template <class T2, class... Ts>
+			auto emplaceWithType(const key_t& k, Ts&&... ts) {
 				return acquireWithMake(k, [&ts...](){
-					return new value_t(std::forward<Ts>(ts)...);
+					return new T2(std::forward<Ts>(ts)...);
 				});
+			}
+			template <class... Ts>
+			auto emplace(const key_t& k, Ts&&... ts) {
+				return emplaceWithType<value_t>(k, std::forward<Ts>(ts)...);
 			}
 			Optional<const key_t&> getKey(const shared_t& p) const {
 				return getKey(p.get());

@@ -26,7 +26,7 @@ namespace spi {
 			const auto rv = this->mt().template getUniformF<value_t>();
 			const int n = mtf({0,100});
 			for(int i=0 ; i<n ; i++) {
-				mgr.acquire(rv());
+				mgr.emplace(rv());
 			}
 			lubee::CheckSerialization(mgr);
 		}
@@ -54,7 +54,7 @@ namespace spi {
 					case Action::Acquire:
 					{
 						const auto val = rv();
-						res.emplace_back(mgr.acquire(val), val);
+						res.emplace_back(mgr.emplace(val), val);
 						break;
 					}
 					// ランダムにどれかリソースを解放
@@ -116,7 +116,7 @@ namespace spi {
 			const auto rv = this->mt().template getUniformF<value_t>();
 			const int n = mtf({0,100});
 			for(int i=0 ; i<n ; i++) {
-				mgr.acquire(lubee::random::GenAlphabetString(mtf, 16), rv());
+				mgr.emplace(lubee::random::GenAlphabetString(mtf, 16), rv());
 			}
 			lubee::CheckSerialization(mgr);
 		}
@@ -165,9 +165,12 @@ namespace spi {
 						auto tk(key);
 						mgr._modifyResourceName(tk);
 						std::pair<res_t,bool> r;
-						if(mtf({0,1}))
-							r = mgr.acquire(key, val);
-						else {
+						if(mtf({0,1})) {
+							if(mtf({0,1}))
+								r = mgr.emplace(key, val);
+							else
+								r = mgr.template emplaceWithType<rawvalue_t>(key, val);
+						} else {
 							bool flag = false;
 							r = mgr.acquireWithMake(key,
 									[&flag, val](){
@@ -192,7 +195,7 @@ namespace spi {
 							// 既に存在するリソースを取得
 							// 同じポインタが返ってくればOK
 							const auto itr = pickRandom();
-							const auto r = mgr.acquire(itr->first, rv());
+							const auto r = mgr.emplace(itr->first, rv());
 							ASSERT_FALSE(r.second);
 							ASSERT_EQ(itr->second.res.get(), r.first.get());
 						}

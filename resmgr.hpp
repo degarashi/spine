@@ -77,12 +77,23 @@ namespace spi {
 			bool operator != (const ResMgr& m) const noexcept {
 				return !(this->operator == (m));
 			}
-			template <class... Ts>
-			auto acquire(Ts&&... ts) {
-				shared_t p(new value_t(std::forward<Ts>(ts)...), _deleter);
+			auto _acquire(value_t* ptr) {
+				shared_t sp(ptr, _deleter);
 				// リソース管理のためのリスト登録
-				_resource.emplace(p.get());
-				return p;
+				_resource.emplace(sp);
+				return sp;
+			}
+			template <class T2, class... Ts>
+			auto emplaceWithType(Ts&&... ts) {
+				return _acquire(new T2(std::forward<Ts>(ts)...));
+			}
+			template <class... Ts>
+			auto emplace(Ts&&... ts) {
+				return emplaceWithType<value_t>(std::forward<Ts>(ts)...);
+			}
+			auto acquire(value_t* ptr) {
+				D_Assert0(_resource.count(tag_t(ptr)) == 0);
+				return _acquire(ptr);
 			}
 			std::size_t size() const noexcept {
 				return _resource.size();
