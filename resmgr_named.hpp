@@ -24,6 +24,23 @@ namespace spi {
 			using tag_t = ResTag<value_t>;
 			using Resource = std::unordered_map<key_t, tag_t>;
 			using Val2Key = std::unordered_map<const value_t*, key_t>;
+			template <bool B>
+			class _iterator : public Resource::iterator {
+				public:
+					using base_t = typename Resource::iterator;
+					using base_t::base_t;
+					using v_t = std::conditional_t<B, const value_t, value_t>;
+					using s_t = std::shared_ptr<v_t>;
+					s_t operator *() const {
+						return base_t::operator*().second.weak.lock();
+					}
+					s_t operator ->() const {
+						return base_t::operator*().second.weak.lock();
+					}
+			};
+			using iterator = _iterator<false>;
+			using const_iterator = _iterator<true>;
+
 			Resource	_resource;
 			Val2Key		_v2k;
 
@@ -76,6 +93,13 @@ namespace spi {
 					this->_release(p);
 				})
 			{}
+			iterator begin() noexcept { return _resource.begin(); }
+			iterator end() noexcept { return _resource.end(); }
+			const_iterator begin() const noexcept { return _resource.begin(); }
+			const_iterator cbegin() const noexcept { return _resource.cbegin(); }
+			const_iterator end() const noexcept { return _resource.end(); }
+			const_iterator cend() const noexcept { return _resource.cend(); }
+
 			// (主にデバッグ用)
 			bool operator == (const ResMgrName& m) const noexcept {
 				if(_resource.size() == m._resource.size()) {

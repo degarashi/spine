@@ -18,7 +18,25 @@ namespace spi {
 		private:
 			using this_t = ResMgr<T>;
 			using tag_t = ResTag<value_t>;
+
 			using Resource = std::unordered_set<tag_t>;
+			template <bool B>
+			class _iterator : public Resource::iterator {
+				public:
+					using base_t = typename Resource::iterator;
+					using base_t::base_t;
+					using v_t = std::conditional_t<B, const value_t, value_t>;
+					using s_t = std::shared_ptr<v_t>;
+					s_t operator *() const {
+						return base_t::operator*().weak.lock();
+					}
+					s_t operator ->() const {
+						return base_t::operator->()->weak.lock();
+					}
+			};
+			using iterator = _iterator<false>;
+			using const_iterator = _iterator<true>;
+
 			Resource	_resource;
 
 			void _release(value_t* p) noexcept {
@@ -59,6 +77,13 @@ namespace spi {
 					this->_release(p);
 				})
 			{}
+			iterator begin() noexcept { return _resource.begin(); }
+			iterator end() noexcept { return _resource.end(); }
+			const_iterator begin() const noexcept { return _resource.begin(); }
+			const_iterator end() const noexcept { return _resource.end(); }
+			const_iterator cbegin() const noexcept { return _resource.cbegin(); }
+			const_iterator cend() const noexcept { return _resource.cend(); }
+
 			// (主にデバッグ用)
 			bool operator == (const ResMgr& m) const noexcept {
 				if(_resource.size() == m._resource.size()) {

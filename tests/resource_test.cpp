@@ -75,6 +75,11 @@ namespace spi {
 			ASSERT_NO_FATAL_FAILURE(CheckCounter<TypeParam>(res.size()));
 			// こちらで管理しているリソースハンドルとリソースマネージャのそれは一致する
 			ASSERT_EQ(res.size(), mgr.size());
+			for(auto m : mgr) {
+				const auto itr = std::find_if(res.begin(), res.end(),
+						[&m](auto& r){ return r.first==m; });
+				ASSERT_NE(itr, res.end());
+			}
 			res.clear();
 			// (ctor - dtor == 0)
 			ASSERT_NO_FATAL_FAILURE(CheckCounter<TypeParam>(0));
@@ -231,6 +236,12 @@ namespace spi {
 			ASSERT_NO_FATAL_FAILURE(CheckCounter<TypeParam>(res.size()));
 			// こちらで管理しているリソースハンドルとリソースマネージャのそれは一致する
 			ASSERT_EQ(res.size(), mgr.size());
+			for(auto m : mgr) {
+				auto* ptr = m.get();
+				const auto itr = std::find_if(res.begin(), res.end(),
+						[ptr](auto& r){ return r.second.res.get() == ptr; });
+				ASSERT_NE(itr, res.end());
+			}
 			res.clear();
 			// (ctor - dtor == 0)
 			ASSERT_NO_FATAL_FAILURE(CheckCounter<TypeParam>(0));
