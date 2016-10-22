@@ -126,14 +126,14 @@ namespace spi {
 				if(auto ret = get(tk))
 					return std::make_pair(ret, false);
 				// 新しくリソースを作成
-				shared_t p(make(), _deleter);
+				shared_t p(make(tk), _deleter);
 				_resource.emplace(tk, p);
 				_v2k.emplace(p.get(), tk);
 				return std::make_pair(p, true);
 			}
 			template <class T2, class... Ts>
 			auto emplaceWithType(const key_t& k, Ts&&... ts) {
-				return acquireWithMake(k, [&ts...](){
+				return acquireWithMake(k, [&ts...](auto&&){
 					return new T2(std::forward<Ts>(ts)...);
 				});
 			}
