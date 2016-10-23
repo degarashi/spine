@@ -1,8 +1,7 @@
 #pragma once
 #include "restag.hpp"
 #include "singleton.hpp"
-#include <cereal/types/memory.hpp>
-#include <cereal/types/vector.hpp>
+#include <unordered_set>
 
 namespace spi {
 	//! 名前無しリソースマネージャ
@@ -16,6 +15,11 @@ namespace spi {
 			using value_t = T;
 			using shared_t = std::shared_ptr<value_t>;
 		private:
+			template <class Ar, class T2>
+			friend void save(Ar&, const ResMgr<T2>&);
+			template <class Ar, class T2>
+			friend void load(Ar&, ResMgr<T2>&);
+
 			using this_t = ResMgr<T>;
 			using tag_t = ResTag<value_t>;
 
@@ -49,28 +53,6 @@ namespace spi {
 			}
 			using DeleteF = std::function<void (value_t*)>;
 			const DeleteF	_deleter;
-
-			using SPV = std::vector<shared_t>;
-			friend class cereal::access;
-			template <class Ar>
-			void save(Ar& ar) const {
-				// 一旦shared_ptrに変換
-				SPV spv;
-				for(auto& r : _resource)
-					spv.emplace_back(r.weak.lock());
-				ar(spv);
-			}
-			template <class Ar>
-			void load(Ar& ar) {
-				// shared_ptrとして読み取る
-				SPV spv;
-				ar(spv);
-
-				_resource.clear();
-				for(auto& s : spv)
-					_resource.emplace(s);
-			}
-
 		public:
 			ResMgr():
 				_deleter([this](value_t* p){

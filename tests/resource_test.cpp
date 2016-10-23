@@ -2,6 +2,8 @@
 #include "../resmgr.hpp"
 #include "../resmgr_named.hpp"
 #include "../lubee/random/string.hpp"
+#include "../serialization/resmgr.hpp"
+#include "../serialization/resmgr_named.hpp"
 
 namespace spi {
 	namespace test {

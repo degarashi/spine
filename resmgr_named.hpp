@@ -2,10 +2,6 @@
 #include "singleton.hpp"
 #include "restag.hpp"
 #include "optional.hpp"
-#include <cereal/types/vector.hpp>
-#include <cereal/types/utility.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/memory.hpp>
 
 namespace spi {
 	//! 名前付きリソースマネージャ
@@ -59,29 +55,10 @@ namespace spi {
 			using DeleteF = std::function<void (value_t*)>;
 			const DeleteF	_deleter;
 
-			friend class cereal::access;
-			using NVPair = std::vector<std::pair<key_t, shared_t>>;
-			template <class Ar>
-			void load(Ar& ar) {
-				// shared_ptrとして読み取る
-				NVPair nv;
-				ar(nv);
-
-				_resource.clear();
-				_v2k.clear();
-				for(auto& n : nv) {
-					auto ret = _resource.emplace(n.first, n.second);
-					_v2k[n.second.get()] = n.first;
-				}
-			}
-			template <class Ar>
-			void save(Ar& ar) const {
-				// 一旦shared_ptrに変換
-				NVPair nv;
-				for(auto& r : _resource)
-					nv.emplace_back(r.first, r.second.weak.lock());
-				ar(nv);
-			}
+			template <class Ar, class T2, class K2>
+			friend void save(Ar&, const ResMgrName<T2,K2>&);
+			template <class Ar, class T2, class K2>
+			friend void load(Ar&, ResMgrName<T2,K2>&);
 
 		protected:
 			//! 継承先のクラスでキーの改変をする必要があればこれをオーバーライドする
