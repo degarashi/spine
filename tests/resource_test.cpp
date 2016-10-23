@@ -178,7 +178,7 @@ namespace spi {
 						} else {
 							bool flag = false;
 							r = mgr.acquireWithMake(key,
-									[&flag, val](){
+									[&flag, val](auto&&){
 										flag = true;
 										return new rawvalue_t(val);
 									}
