@@ -1,85 +1,83 @@
 #include "test.hpp"
 #include "../treenode.hpp"
 #include "../lubee/compiler_macro.hpp"
-#include <cereal/types/memory.hpp>
+#include "../serialization/treenode.hpp"
 
 namespace spi {
 	namespace test {
-		namespace {
-			struct TestNode;
-			using SPNode = std::shared_ptr<TestNode>;
-			using WPNode = std::weak_ptr<TestNode>;
-			using SPNodeV = std::vector<SPNode>;
-			struct TestNode : std::enable_shared_from_this<TestNode> {
-				SPNodeV		child;
-				WPNode		parent;
-				int			value;
+		struct TestNode;
+		using SPNode = std::shared_ptr<TestNode>;
+		using WPNode = std::weak_ptr<TestNode>;
+		using SPNodeV = std::vector<SPNode>;
+		struct TestNode : std::enable_shared_from_this<TestNode> {
+			SPNodeV		child;
+			WPNode		parent;
+			int			value;
 
-				enum class Iterate {
-					ReturnFromChild,
-					StepIn,
-					Next,
-					Quit
-				};
-				TestNode(int val): value(val) {}
-				void addChild(const SPNode& nd) {
-					ASSERT_TRUE(std::find(child.begin(), child.end(), nd) == child.end());
-					child.push_back(nd);
-					ASSERT_FALSE(nd->getParent());
-					nd->parent = shared_from_this();
-				}
-				void removeChild(const SPNode& nd) {
-					auto itr = std::find(child.begin(), child.end(), nd);
-					ASSERT_TRUE(itr != child.end());
-					child.erase(itr);
-					ASSERT_EQ(nd->getParent().get(), this);
-					nd->parent = WPNode();
-				}
-				template <bool Sib, class Callback>
-				void iterateDepthFirst(Callback&& cb, int depth=0) {
-					cb(*this, depth);
-					for(auto& c : child)
-						c->iterateDepthFirst<Sib>(std::forward<Callback>(cb), depth+1);
-				}
-				SPNode getChild() const {
-					if(child.empty())
-						return SPNode();
-					return child[0];
-				}
-				SPNode getParent() {
-					return parent.lock();
-				}
+			enum class Iterate {
+				ReturnFromChild,
+				StepIn,
+				Next,
+				Quit
 			};
+			TestNode(int val): value(val) {}
+			void addChild(const SPNode& nd) {
+				ASSERT_TRUE(std::find(child.begin(), child.end(), nd) == child.end());
+				child.push_back(nd);
+				ASSERT_FALSE(nd->getParent());
+				nd->parent = shared_from_this();
+			}
+			void removeChild(const SPNode& nd) {
+				auto itr = std::find(child.begin(), child.end(), nd);
+				ASSERT_TRUE(itr != child.end());
+				child.erase(itr);
+				ASSERT_EQ(nd->getParent().get(), this);
+				nd->parent = WPNode();
+			}
+			template <bool Sib, class Callback>
+			void iterateDepthFirst(Callback&& cb, int depth=0) {
+				cb(*this, depth);
+				for(auto& c : child)
+					c->iterateDepthFirst<Sib>(std::forward<Callback>(cb), depth+1);
+			}
+			SPNode getChild() const {
+				if(child.empty())
+					return SPNode();
+				return child[0];
+			}
+			SPNode getParent() {
+				return parent.lock();
+			}
+		};
 
-			class TreeNode_t : public TreeNode<TreeNode_t> {
-				using base_t = TreeNode<TreeNode_t>;
-				private:
-					friend class cereal::access;
-					template <class Ar>
-					void serialize(Ar& ar, const unsigned int) {
-						ar(value, cereal::base_class<base_t>(this));
-					}
-				public:
-					int		value;
-					TreeNode_t() = default;
-					TreeNode_t(int v): value(v) {}
-					bool operator == (const TreeNode_t& t) const {
-						return value == t.value;
-					}
-			};
-			using SPTreeNode = std::shared_ptr<TreeNode_t>;
-
-			void CheckParent(const SPTreeNode& nd) {
-				auto c = nd->getChild();
-				while(c) {
-					// 子ノードの親をチェック
-					auto p = c->getParent();
-					ASSERT_EQ(p.get(), nd.get());
-					// 下層のノードを再帰的にチェック
-					ASSERT_NO_FATAL_FAILURE(CheckParent(c));
-					// 兄弟ノードをチェック
-					c = c->getSibling();
+		class TreeNode_t : public TreeNode<TreeNode_t> {
+			using base_t = TreeNode<TreeNode_t>;
+			private:
+				friend class cereal::access;
+				template <class Ar>
+				void serialize(Ar& ar) {
+					ar(value, cereal::base_class<base_t>(this));
 				}
+			public:
+				int		value;
+				TreeNode_t() = default;
+				TreeNode_t(int v): value(v) {}
+				bool operator == (const TreeNode_t& t) const {
+					return value == t.value;
+				}
+		};
+		using SPTreeNode = std::shared_ptr<TreeNode_t>;
+
+		void CheckParent(const SPTreeNode& nd) {
+			auto c = nd->getChild();
+			while(c) {
+				// 子ノードの親をチェック
+				auto p = c->getParent();
+				ASSERT_EQ(p.get(), nd.get());
+				// 下層のノードを再帰的にチェック
+				ASSERT_NO_FATAL_FAILURE(CheckParent(c));
+				// 兄弟ノードをチェック
+				c = c->getSibling();
 			}
 		}
 		template <class A, class B>
@@ -699,4 +697,8 @@ namespace spi {
 			}
 		}
 	}
+}
+namespace cereal {
+	template <class Ar>
+	struct specialize<Ar, spi::test::TreeNode_t, cereal::specialization::member_serialize> {};
 }

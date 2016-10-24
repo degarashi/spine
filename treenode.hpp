@@ -3,8 +3,8 @@
 #include "lubee/meta/enable_if.hpp"
 #include "lubee/error.hpp"
 #include <vector>
-#include <cereal/access.hpp>
 #include <algorithm>
+#include <memory>
 
 namespace spi {
 	DEF_HASMETHOD(clone)
@@ -49,14 +49,8 @@ namespace spi {
 			using PCVector = std::vector<const T*>;
 
 		private:
-			friend class cereal::access;
-			template <class Ar>
-			void serialize(Ar& ar) {
-				ar(CEREAL_NVP(_spChild),
-					CEREAL_NVP(_spSibling),
-					CEREAL_NVP(_wpParent),
-					CEREAL_NVP(_wpPrevSibling));
-			}
+			template <class Ar, class T2>
+			friend void serialize(Ar&, TreeNode<T2>&);
 
 			SP			_spChild,
 						_spSibling;
