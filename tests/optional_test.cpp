@@ -1,6 +1,7 @@
 #include "test.hpp"
 #include "../optional.hpp"
 #include "moveonly.hpp"
+#include "../serialization/optional.hpp"
 
 namespace spi {
 	namespace test {

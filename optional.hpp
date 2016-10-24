@@ -3,7 +3,6 @@
 #include "lubee/meta/enable_if.hpp"
 #include "lubee/none.hpp"
 #include <utility>
-#include <cereal/cereal.hpp>
 
 namespace spi {
 	using none_t = lubee::none_t;
@@ -11,122 +10,112 @@ namespace spi {
 
 	template <class P>
 	using IsRP = std::integral_constant<bool, std::is_reference<P>{} || std::is_pointer<P>{}>;
-	namespace {
-		namespace opt_tmp {
-			template <class T>
-			struct alignas(alignof(T)) Buffer {
-				uint8_t		_data[sizeof(T)];
+	namespace opt_tmp {
+		template <class T>
+		struct alignas(alignof(T)) Buffer {
+			uint8_t		_data[sizeof(T)];
 
-				Buffer() = default;
-				template <class T2>
-				Buffer(T2&& t) {
-					new(ptr()) T(std::forward<T2>(t));
-				}
+			Buffer() = default;
+			template <class T2>
+			Buffer(T2&& t) {
+				new(ptr()) T(std::forward<T2>(t));
+			}
 
-				T* ptr() noexcept {
-					// Debug時は中身が有効かチェック
-					#ifdef DEBUG
-					#endif
-					return reinterpret_cast<T*>(_data);
-				}
-				const T* ptr() const noexcept {
-					// Debug時は中身が有効かチェック
-					#ifdef DEBUG
-					#endif
-					return reinterpret_cast<const T*>(_data);
-				}
-				T& get() noexcept {
-					return *ptr();
-				}
-				const T& get() const noexcept {
-					return *ptr();
-				}
-				template <class... Ts>
-				void ctor(Ts&&... ts) {
-					new(ptr()) T(std::forward<Ts>(ts)...);
-				}
-				void dtor() noexcept {
-					ptr()->~T();
-				}
-				#define NOEXCEPT_WHEN_RAW(t) noexcept(noexcept(IsRP<t>{}))
-				template <class T2>
-				Buffer& operator = (T2&& t) NOEXCEPT_WHEN_RAW(T2) {
-					get() = std::forward<T2>(t);
-					return *this;
-				}
-				#undef NOEXCEPT_WHEN_RAW
-				template <class Ar>
-				void serialize(Ar& ar) {
-					ar(get());
-				}
-			};
-			template <class T>
-			struct Buffer<T&> {
-				T*	_data;
+			T* ptr() noexcept {
+				// Debug時は中身が有効かチェック
+				#ifdef DEBUG
+				#endif
+				return reinterpret_cast<T*>(_data);
+			}
+			const T* ptr() const noexcept {
+				// Debug時は中身が有効かチェック
+				#ifdef DEBUG
+				#endif
+				return reinterpret_cast<const T*>(_data);
+			}
+			T& get() noexcept {
+				return *ptr();
+			}
+			const T& get() const noexcept {
+				return *ptr();
+			}
+			template <class... Ts>
+			void ctor(Ts&&... ts) {
+				new(ptr()) T(std::forward<Ts>(ts)...);
+			}
+			void dtor() noexcept {
+				ptr()->~T();
+			}
+			#define NOEXCEPT_WHEN_RAW(t) noexcept(noexcept(IsRP<t>{}))
+			template <class T2>
+			Buffer& operator = (T2&& t) NOEXCEPT_WHEN_RAW(T2) {
+				get() = std::forward<T2>(t);
+				return *this;
+			}
+			#undef NOEXCEPT_WHEN_RAW
+			template <class Ar, class T2>
+			friend void serialize(Ar&, Buffer<T2>&);
+		};
+		template <class T>
+		struct Buffer<T&> {
+			T*	_data;
 
-				Buffer() = default;
-				Buffer(T& t) noexcept: _data(&t) {}
-				T* ptr() noexcept {
-					return _data;
-				}
-				const T* ptr() const noexcept {
-					return _data;
-				}
-				T& get() noexcept {
-					return *ptr();
-				}
-				const T& get() const noexcept {
-					return *ptr();
-				}
-				void ctor() noexcept {}
-				void ctor(T& t) noexcept{
-					_data = &t;
-				}
-				void dtor() noexcept {}
-				Buffer& operator = (T& t) noexcept {
-					_data = &t;
-					return *this;
-				}
-				// 参照のシリアライズには対応しない
-				template <class Ar>
-				void serialize(Ar&) {
-					static_assert(!sizeof(Ar), "can't serialize reference");
-				}
-			};
-			template <class T>
-			struct Buffer<T*> {
-				T*	_data;
+			Buffer() = default;
+			Buffer(T& t) noexcept: _data(&t) {}
+			T* ptr() noexcept {
+				return _data;
+			}
+			const T* ptr() const noexcept {
+				return _data;
+			}
+			T& get() noexcept {
+				return *ptr();
+			}
+			const T& get() const noexcept {
+				return *ptr();
+			}
+			void ctor() noexcept {}
+			void ctor(T& t) noexcept{
+				_data = &t;
+			}
+			void dtor() noexcept {}
+			Buffer& operator = (T& t) noexcept {
+				_data = &t;
+				return *this;
+			}
+			template <class Ar, class T2>
+			friend void serialize(Ar&, opt_tmp::Buffer<T2&>&);
+		};
+		template <class T>
+		struct Buffer<T*> {
+			T*	_data;
 
-				Buffer() = default;
-				Buffer(T* t) noexcept: _data(t) {}
-				T* ptr() noexcept {
-					return _data;
-				}
-				const T* ptr() const noexcept {
-					return _data;
-				}
-				T*& get() noexcept {
-					return _data;
-				}
-				T* const& get() const noexcept {
-					return _data;
-				}
-				void ctor() noexcept {}
-				void ctor(T* t) noexcept {
-					_data = t;
-				}
-				void dtor() noexcept {}
-				Buffer& operator = (T* t) noexcept {
-					_data = t;
-					return *this;
-				}
-				// ポインタのシリアライズには対応しない
-				template <class Ar>
-				void serialize(Ar&) {
-					static_assert(!sizeof(Ar), "can't serialize pointer");
-				}
-			};
-		}
+			Buffer() = default;
+			Buffer(T* t) noexcept: _data(t) {}
+			T* ptr() noexcept {
+				return _data;
+			}
+			const T* ptr() const noexcept {
+				return _data;
+			}
+			T*& get() noexcept {
+				return _data;
+			}
+			T* const& get() const noexcept {
+				return _data;
+			}
+			void ctor() noexcept {}
+			void ctor(T* t) noexcept {
+				_data = t;
+			}
+			void dtor() noexcept {}
+			Buffer& operator = (T* t) noexcept {
+				_data = t;
+				return *this;
+			}
+			template <class Ar, class T2>
+			friend void serialize(Ar&, opt_tmp::Buffer<T2*>&);
+		};
 	}
 
 	template <class T>
@@ -247,16 +236,9 @@ namespace spi {
 				}
 				return *this;
 			}
-			template <class Ar>
-			void serialize(Ar& ar) {
-				ar(CEREAL_NVP(_bInit));
-				if(_bInit) {
-					_buffer.serialize(ar);
-				}
-			}
+			template <class Ar, class T2>
+			friend void serialize(Ar&, Optional<T2>&);
 	};
 	template <class T>
 	const typename Optional<T>::_AsInitialized Optional<T>::AsInitialized{};
-
-	namespace opt_tmp {}
 }
