@@ -2,6 +2,7 @@
 #include "singleton.hpp"
 #include "restag.hpp"
 #include "optional.hpp"
+#include <unordered_map>
 
 namespace spi {
 	//! 名前付きリソースマネージャ
