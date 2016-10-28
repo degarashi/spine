@@ -2,6 +2,7 @@
 #include "lubee/meta/check_macro.hpp"
 #include "lubee/meta/enable_if.hpp"
 #include "lubee/error.hpp"
+#include "enum.hpp"
 #include <vector>
 #include <algorithm>
 #include <memory>
@@ -22,14 +23,13 @@ namespace spi {
 	}
 
 	//! iterateDepthFirstの戻り値
-	struct Iterate {
-		enum e {
-			ReturnFromChild,	//!< 内部用
-			StepIn,				//!< 子を巡回
-			Next,				//!< 子を巡回せず兄弟ノードへ進む
-			Quit				//!< 直ちに巡回を終える
-		};
-	};
+	DefineEnum(
+		Iterate,
+		(ReturnFromChild)	//!< 内部用
+		(StepIn)			//!< 子を巡回
+		(Next)				//!< 子を巡回せず兄弟ノードへ進む
+		(Quit)				//!< 直ちに巡回を終える
+	);
 	//! 汎用ツリー構造
 	/*! Tは必ずTreeNode<T>を継承する前提 */
 	template <class T>
@@ -252,9 +252,9 @@ namespace spi {
 			/*! \tparam Sib		兄弟ノードを巡回対象に加えるか
 				\tparam BConst	trueならconst巡回 */
 			template <bool Sib, class Callback, bool BConst=false>
-			Iterate::e iterateDepthFirst(Callback&& cb, int depth=0) {
+			Iterate iterateDepthFirst(Callback&& cb, int depth=0) {
 				using thistc = std::conditional_t<BConst, const T, T>;
-				Iterate::e t = cb(static_cast<thistc&>(*this), depth);
+				Iterate t = cb(static_cast<thistc&>(*this), depth);
 				if(t == Iterate::Quit)
 					return Iterate::Quit;
 				if(t == Iterate::StepIn) {
@@ -268,7 +268,7 @@ namespace spi {
 				return Iterate::ReturnFromChild;
 			}
 			template <bool Sib, class Callback>
-			Iterate::e iterateDepthFirst(Callback&& cb, int depth=0) const {
+			Iterate iterateDepthFirst(Callback&& cb, int depth=0) const {
 				return const_cast<this_t*>(this)->template iterateDepthFirst<Sib, Callback, true>(std::forward<Callback>(cb), depth);
 			}
 			template <class Callback>

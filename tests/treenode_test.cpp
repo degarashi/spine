@@ -14,12 +14,13 @@ namespace spi {
 			WPNode		parent;
 			int			value;
 
-			enum class Iterate {
-				ReturnFromChild,
-				StepIn,
-				Next,
-				Quit
-			};
+			DefineEnum(
+				Iterate,
+				(ReturnFromChild)
+				(StepIn)
+				(Next)
+				(Quit)
+			);
 			TestNode(int val): value(val) {}
 			void addChild(const SPNode& nd) {
 				ASSERT_TRUE(std::find(child.begin(), child.end(), nd) == child.end());
@@ -209,19 +210,17 @@ namespace spi {
 			_CallTS(std::forward<CB>(cb), std::forward<Ts>(ts)...);
 			return res;
 		}
-		struct Manip {
-			enum type {
-				Add,
-				Remove,
-				Recompose,
-				_Num
-			};
-		};
-		using ManipV = std::vector<Manip::type>;
+		DefineEnum(
+			Manip,
+			(Add)
+			(Remove)
+			(Recompose)
+		);
+		using ManipV = std::vector<Manip>;
 		template <class RD, class VT, class T, class... Ts>
 		void RandomManipulate(RD& rd, VT&& vt, const int index, const ManipV& manipList, T&& t, Ts&&... ts) {
 			// ノードが1つしか無い時は追加オンリー
-			Manip::type typ;
+			Manip typ;
 			if(t.size() <= 1) {
 				if(std::count(manipList.begin(), manipList.end(), Manip::Add) == 0)
 					return;
@@ -582,24 +581,22 @@ namespace spi {
 			ChkCount(root, value+1);
 		}
 		namespace {
-			struct Action {
-				enum type {
-					ParentChange,
-					AddChild,
-					RemChild,
-					_Num
-				};
-			};
+			DefineEnum(
+				Action,
+				(ParentChange)
+				(AddChild)
+				(RemChild)
+			);
 			class TreeNotify_t;
 			using SP = std::shared_ptr<TreeNotify_t>;
 			struct ActInfo {
 				const TreeNotify_t*		target;
-				Action::type			action;
+				Action					action;
 				const TreeNotify_t*		node;
 	
 				using Ptr = TreeNode<TreeNotify_t>*;
 				ActInfo(const Ptr tgt,
-						Action::type type,
+						Action type,
 						const Ptr node);
 				static ActInfo AsParentChange(const Ptr tgt, const Ptr node);
 				static ActInfo AsAddChild(const Ptr tgt, const Ptr node);
@@ -632,7 +629,7 @@ namespace spi {
 					TreeNotify_t(const int v): value(v) {}
 			};
 			ActInfo::ActInfo(const Ptr tgt,
-							Action::type type,
+							Action type,
 							const Ptr node):
 				target(static_cast<const TreeNotify_t*>(tgt)),
 				action(type),

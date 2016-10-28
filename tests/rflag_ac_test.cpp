@@ -1,6 +1,7 @@
 #include "test.hpp"
 #include "util.hpp"
 #include "../rflag.hpp"
+#include "../enum.hpp"
 
 namespace spi {
 	namespace test {
@@ -212,6 +213,12 @@ namespace spi {
 			using MT = std::decay_t<decltype(std::declval<Random>().mt())>;
 			using RF = RFObj<MT>;
 		};
+		DefineEnum(
+			Act,
+			(Set)
+			(Get)
+			(Ref)
+		);
 		TEST_F(RFlagAc, General) {
 			using RF = RFlagAc::RF;
 			// 基本的な動作は RFlag/*.General で確認済みなのでgetWithCheck()のテストのみ行う
@@ -220,14 +227,6 @@ namespace spi {
 
 			const auto mtf = mt.getUniformF<int>();
 			// ランダムに値をセットする
-			struct Act {
-				enum e {
-					Set,
-					Get,
-					Ref,
-					_Num
-				};
-			};
 			int range;
 			RF::Func_t* func;
 			const int N = mtf({1, 128});

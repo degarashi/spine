@@ -4,6 +4,7 @@
 #include "../lubee/random/string.hpp"
 #include "../serialization/resmgr.hpp"
 #include "../serialization/resmgr_named.hpp"
+#include "../enum.hpp"
 
 namespace spi {
 	namespace test {
@@ -33,13 +34,11 @@ namespace spi {
 			lubee::CheckSerialization(mgr);
 		}
 
-		struct Action {
-			enum e {
-				Acquire,
-				Release,
-				_Num
-			};
-		};
+		DefineEnum(
+			Action,
+			(Acquire)
+			(Release)
+		);
 		TYPED_TEST(ResourceMgr, General) {
 			USING(res_t);
 			USING(value_t);
@@ -127,16 +126,14 @@ namespace spi {
 			}
 			lubee::CheckSerialization(mgr);
 		}
-		struct ActionN {
-			enum e {
-				Acquire,
-				Release,
-				AcquireExist,
-				FindByName,
-				FindByHandle,
-				_Num
-			};
-		};
+		DefineEnum(
+			ActionN,
+			(Acquire)
+			(Release)
+			(AcquireExist)
+			(FindByName)
+			(FindByHandle)
+		);
 		TYPED_TEST(ResourceMgrName, General) {
 			USING(key_t);
 			USING(res_t);

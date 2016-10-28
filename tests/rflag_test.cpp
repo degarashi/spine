@@ -2,6 +2,7 @@
 #include "../rflag.hpp"
 #include "../lubee/bit.hpp"
 #include "../lubee/meta/index_sequence.hpp"
+#include "../enum.hpp"
 
 namespace spi {
 	namespace test {
@@ -107,14 +108,12 @@ namespace spi {
 
 			public:
 				using Cache_t = typename RFlag_t::ct_base;
-				struct Action {
-					enum e {
-						Set,
-						Get,
-						Ref,
-						_Num
-					};
-				};
+				DefineEnum(
+					Action,
+					(Set)
+					(Get)
+					(Ref)
+				);
 				constexpr static int ValW = lubee::bit::LowClear(static_cast<unsigned int>(Cache_t::size)) << 1,
 									ValB = lubee::bit::MSB(ValW),
 									ActW = lubee::bit::LowClear(static_cast<unsigned int>(Action::_Num)) << 1,

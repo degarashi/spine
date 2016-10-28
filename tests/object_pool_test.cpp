@@ -1,18 +1,17 @@
 #define OBJECT_POOL_CHECKBLOCK
 #include "test.hpp"
 #include "../object_pool.hpp"
+#include "../enum.hpp"
 
 namespace spi {
 	namespace test {
-		struct Action {
-			enum {
-				Allocate,
-				AllocateArray,
-				Destroy,
-				DestroyArray,
-				_Num
-			} e;
-		};
+		DefineEnum(
+			Action,
+			(Allocate)
+			(AllocateArray)
+			(Destroy)
+			(DestroyArray)
+		);
 
 		template <class T, class MTF, class MkValue>
 		void TestPool(MTF&& mtf, MkValue&& mkValue) {
