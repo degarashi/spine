@@ -697,5 +697,5 @@ namespace spi {
 }
 namespace cereal {
 	template <class Ar>
-	struct specialize<Ar, spi::test::TreeNode_t, cereal::specialization::non_member_serialize> {};
+	struct specialize<Ar, spi::test::TreeNode_t, cereal::specialization::member_serialize> {};
 }
