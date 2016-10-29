@@ -52,6 +52,13 @@ namespace spi {
 					p->~value_t();
 				} catch(...) {}
 			}
+			// 無名リソースを作成する際の通し番号
+			uint64_t _acounter;
+			key_t _makeAKey() {
+				key_t key("__anonymous__");
+				key += std::to_string(_acounter++);
+				return key;
+			}
 
 			using DeleteF = std::function<void (value_t*)>;
 			const DeleteF	_deleter;
@@ -67,6 +74,7 @@ namespace spi {
 
 		public:
 			ResMgrName():
+				_acounter(0),
 				_deleter([this](value_t* p){
 					this->_release(p);
 				})
@@ -89,22 +97,24 @@ namespace spi {
 						++itr0;
 						++itr1;
 					}
-					return true;
+					return _acounter == m._acounter;
 				}
 				return false;
 			}
 			bool operator != (const ResMgrName& m) const noexcept {
 				return !(this->operator == (m));
 			}
+			// ---- 名前付きリソース作成 ----
 			template <class Make>
-			std::pair<shared_t, bool> acquireWithMake(const key_t& k, Make&& make) {
+			auto acquireWithMake(const key_t& k, Make&& make) {
 				key_t tk(k);
 				_modifyResourceName(tk);
+				using ret_t = std::remove_pointer_t<decltype(make(tk))>;
 				// 既に同じ名前でリソースを確保済みならばそれを返す
 				if(auto ret = get(tk))
-					return std::make_pair(ret, false);
+					return std::make_pair(std::static_pointer_cast<ret_t>(ret), false);
 				// 新しくリソースを作成
-				shared_t p(make(tk), _deleter);
+				std::shared_ptr<ret_t> p(make(tk), _deleter);
 				_resource.emplace(tk, p);
 				_v2k.emplace(p.get(), tk);
 				return std::make_pair(p, true);
@@ -119,6 +129,27 @@ namespace spi {
 			auto emplace(const key_t& k, Ts&&... ts) {
 				return emplaceWithType<value_t>(k, std::forward<Ts>(ts)...);
 			}
+
+			// ---- 無名リソース作成 ----
+			template <class P>
+			auto acquireA(P* ptr) {
+				for(;;) {
+					// 適当にリソース名を生成して、ダブりがなければOK
+					const auto key = _makeAKey();
+					auto ret = acquireWithMake(key, [=](auto&&){ return ptr; });
+					if(ret.second)
+						return ret.first;
+				}
+			}
+			template <class T2, class... Ts>
+			auto emplaceA_WithType(Ts&&... ts) {
+				return acquireA(new T2(std::forward<Ts>(ts)...));
+			}
+			template <class... Ts>
+			auto emplaceA(Ts&&... ts) {
+				return emplaceA_WithType<value_t>(std::forward<Ts>(ts)...);
+			}
+
 			Optional<const key_t&> getKey(const shared_t& p) const {
 				return getKey(p.get());
 			}

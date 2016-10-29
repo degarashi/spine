@@ -129,6 +129,7 @@ namespace spi {
 		DefineEnum(
 			ActionN,
 			(Acquire)
+			(AcquireA)
 			(Release)
 			(AcquireExist)
 			(FindByName)
@@ -186,6 +187,26 @@ namespace spi {
 						}
 						ASSERT_TRUE(r.second);
 						res.emplace(tk, Res{key, r.first, val});
+						break;
+					}
+					case ActionN::AcquireA:
+					{
+						// 無名リソースを確保
+						const auto val = rv();
+						res_t ret;
+						switch(mtf({0,2})) {
+							case 0:
+								ret = mgr.acquireA(new rawvalue_t(val));
+								break;
+							case 1:
+								ret = mgr.emplaceA(val);
+								break;
+							case 2:
+								ret = mgr.template emplaceA_WithType<rawvalue_t>(val);
+								break;
+						}
+						const auto key = *mgr.getKey(ret);
+						res.emplace(key, Res{key, ret, val});
 						break;
 					}
 					case ActionN::Release:

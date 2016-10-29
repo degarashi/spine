@@ -13,6 +13,7 @@ namespace spi {
 		for(auto& r : mgr._resource)
 			nv.emplace_back(r.first, r.second.weak.lock());
 		ar(nv);
+		ar(mgr._acounter);
 	}
 	template <class Ar, class T, class K>
 	void load(Ar& ar, ResMgrName<T,K>& mgr) {
@@ -28,5 +29,6 @@ namespace spi {
 			auto ret = mgr._resource.emplace(n.first, n.second);
 			mgr._v2k[n.second.get()] = n.first;
 		}
+		ar(mgr._acounter);
 	}
 }

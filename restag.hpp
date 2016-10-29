@@ -10,7 +10,8 @@ namespace spi {
 		const value_t*	ptr;
 		weak_t			weak;
 
-		ResTag(const shared_t& sp):
+		template <class P>
+		ResTag(const std::shared_ptr<P>& sp):
 			ptr(sp.get()),
 			weak(sp)
 		{}
