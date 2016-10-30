@@ -1,6 +1,6 @@
 #include "test.hpp"
 #include "../treenode.hpp"
-#include "../lubee/compiler_macro.hpp"
+#include "lubee/compiler_macro.hpp"
 #include "../serialization/treenode.hpp"
 
 namespace spi {

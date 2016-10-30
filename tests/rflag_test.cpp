@@ -1,7 +1,7 @@
 #include "test.hpp"
 #include "../rflag.hpp"
-#include "../lubee/bit.hpp"
-#include "../lubee/meta/index_sequence.hpp"
+#include "lubee/bit.hpp"
+#include "lubee/meta/index_sequence.hpp"
 #include "../enum.hpp"
 
 namespace spi {
