@@ -5,6 +5,7 @@
 #include "lubee/meta/typelist.hpp"
 #include "lubee/meta/constant_t.hpp"
 #include "lubee/wrapper.hpp"
+#include "lubee/error.hpp"
 
 namespace spi {
 	//! 累積カウンタの比較用
