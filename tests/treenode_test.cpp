@@ -402,7 +402,7 @@ namespace spi {
 			void CheckPlain(const T& ar, int idx) {
 				if(idx == 0)
 					return;
-	
+
 				auto ptr = GetPointer(ar[idx]->getParent());
 				ASSERT_TRUE(static_cast<bool>(ptr));
 				auto itr = std::find_if(ar.begin(), ar.end(), [ptr](auto& p){
@@ -454,7 +454,7 @@ namespace spi {
 				treeA
 			);
 			TestTree<TreeNode_t>	treeB(treeA.getRoot()->cloneTree());
-	
+
 			// ツリー構造比較はtrue
 			ASSERT_TRUE(CompareTreeStructure(*treeA.getRoot(), *treeB.getRoot()));
 			// データ比較もtrue
@@ -480,7 +480,7 @@ namespace spi {
 				cs_manip,
 				tree
 			);
-		
+
 			// シリアライズ
 			auto sl = tree.getRoot();
 			auto ar0 = TestTree<TreeNode_t>::Plain(sl);
@@ -495,7 +495,7 @@ namespace spi {
 				ia(cereal::make_nvp("test", sl));
 			}
 			auto ar1 = TestTree<TreeNode_t>::Plain(sl);
-		
+
 			// シリアライズ前後でデータを比べる
 			ASSERT_NO_FATAL_FAILURE(CheckEqual(ar0, ar1));
 		}
@@ -512,7 +512,7 @@ namespace spi {
 				cs_manip,
 				tree
 			);
-	
+
 			// Iterate関数を使ってカウント
 			int depth = 0;
 			tree.getRoot()->iterateDepthFirst<false>([&depth](auto&, int d){
@@ -593,7 +593,7 @@ namespace spi {
 				const TreeNotify_t*		target;
 				Action					action;
 				const TreeNotify_t*		node;
-	
+
 				using Ptr = TreeNode<TreeNotify_t>*;
 				ActInfo(const Ptr tgt,
 						Action type,

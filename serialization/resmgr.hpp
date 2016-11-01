@@ -21,7 +21,7 @@ namespace spi {
 		// shared_ptrとして読み取る
 		SPV spv;
 		ar(spv);
-	
+
 		mgr._resource.clear();
 		for(auto& s : spv)
 			mgr._resource.emplace(s);
