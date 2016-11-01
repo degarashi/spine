@@ -28,7 +28,7 @@ namespace spi {
 	constexpr std::size_t CalcBlockSize(const std::size_t s, const std::size_t bs) {
 		return (s + (bs-1)) / bs * bs;
 	}
-	std::size_t CalcOffsetSize(const std::size_t align, const std::size_t header, const void* ptr) {
+	inline std::size_t CalcOffsetSize(const std::size_t align, const std::size_t header, const void* ptr) {
 		const auto iptr = reinterpret_cast<uintptr_t>(ptr);
 		return static_cast<std::size_t>((iptr + header + (align-1)) / align * align) - iptr;
 	}
