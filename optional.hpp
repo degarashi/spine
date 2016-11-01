@@ -2,12 +2,17 @@
 #include "detect_type.hpp"
 #include "lubee/meta/enable_if.hpp"
 #include "lubee/none.hpp"
+#include "argholder.hpp"
 #include <utility>
 
 namespace spi {
 	using none_t = lubee::none_t;
 	const static none_t none;
 
+	template <class... Ts>
+	auto construct(Ts&&... ts) {
+		return ArgHolder<Ts...>(std::forward<Ts>(ts)...);
+	}
 	template <class P>
 	using IsRP = std::integral_constant<bool, std::is_reference<P>{} || std::is_pointer<P>{}>;
 	namespace opt_tmp {
@@ -53,6 +58,14 @@ namespace spi {
 				return *this;
 			}
 			#undef NOEXCEPT_WHEN_RAW
+			template <class... Ts>
+			void operator = (ArgHolder<Ts...>&& ah) {
+				void* ptr = _data;
+				const auto fn = [ptr](Ts... ts) {
+					new(ptr) T(ts...);
+				};
+				ah.inorder(fn);
+			}
 			template <class Ar, class T2>
 			friend void serialize(Ar&, Buffer<T2>&);
 		};
@@ -215,8 +228,11 @@ namespace spi {
 				_buffer.ctor();
 				return false;
 			}
-			template <class T2, ENABLE_IF(!(is_optional<std::decay_t<T2>>{}))>
-			Optional& operator = (T2&& t) noexcept(Is_RP) {
+			template <
+				class T2,
+				ENABLE_IF(!(is_optional<std::decay_t<T2>>{}))
+			>
+			Optional& operator = (T2&& t) {
 				if(!_bInit) {
 					_bInit = true;
 					using CanConstruct = std::is_constructible<value_t, decltype(std::forward<T2>(t))>;
@@ -224,6 +240,11 @@ namespace spi {
 						return *this;
 				}
 				_buffer = std::forward<T2>(t);
+				return *this;
+			}
+			template <class... Ts>
+			Optional& operator = (ArgHolder<Ts...>&& t) {
+				_buffer = std::move(t);
 				return *this;
 			}
 			template <class T2, ENABLE_IF((is_optional<std::decay_t<T2>>{}))>

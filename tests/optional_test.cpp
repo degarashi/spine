@@ -98,6 +98,13 @@ namespace spi {
 			op1 = std::move(op0);
 			EXPECT_EQ(op2, op1);
 		}
+		template <class V, class MkValue>
+		void CheckConstruct(MkValue&& mkv) {
+			const auto src = mkv();
+			::spi::Optional<V> op0, op1(src);
+			op0 = ::spi::construct(src);
+			EXPECT_EQ(op0, op1);
+		}
 
 		//! Optionalテストケース: 非ポインタ、非リファレンス
 		template <class V, class MkValue>
@@ -129,6 +136,8 @@ namespace spi {
 			EXPECT_NO_FATAL_FAILURE(CheckCopyConstruct<V>(mkv));
 			// ムーブコンストラクタのチェック
 			EXPECT_NO_FATAL_FAILURE(CheckMoveConstruct<V>(mkv));
+			// construct関数のチェック
+			EXPECT_NO_FATAL_FAILURE(CheckConstruct<V>(mkv));
 		}
 
 		template <class V, class MkValue, ENABLE_IF(!(std::is_move_assignable<V>{}))>
