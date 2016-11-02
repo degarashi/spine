@@ -114,6 +114,9 @@ namespace spi {
 			using base_t = ValueHolder<Ts...>;
 			//! キャッシュフラグを格納する変数
 			mutable RFlagValue_t _rflag;
+
+			template <class Ar, class C, class... T>
+			friend void serialize(Ar&, RFlag<C,T...>&);
 		public:
 			using ct_base = ::lubee::Types<Ts...>;
 		private:

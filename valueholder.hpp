@@ -7,6 +7,9 @@ namespace spi {
 		void ref(T2*) noexcept {}
 		template <class T2>
 		void cref(T2*) const noexcept {}
+
+		template <class Ar, class... Ts0>
+		friend void serialize(Ar&, ValueHolder<Ts0...>&);
 	};
 	template <class T, class... Ts>
 	struct ValueHolder<T, Ts...> : ValueHolder<Ts...> {
@@ -28,5 +31,8 @@ namespace spi {
 		decltype(auto) cref(T2*) const noexcept {
 			return base_t::cref((T2*)nullptr);
 		}
+
+		template <class Ar, class T0, class... Ts0>
+		friend void serialize(Ar&, ValueHolder<T0,Ts0...>&);
 	};
 }
