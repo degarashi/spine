@@ -3,6 +3,7 @@
 #include "lubee/bit.hpp"
 #include "lubee/meta/index_sequence.hpp"
 #include "../enum.hpp"
+#include "../serialization/rflag.hpp"
 
 namespace spi {
 	namespace test {
@@ -89,7 +90,7 @@ namespace spi {
 		class RFObj {
 			template <class, class>
 			friend struct RFRefr;
-			private:
+			public:
 				template <int N>
 				using IConst = lubee::IConst<N>;
 
@@ -452,6 +453,8 @@ namespace spi {
 				}
 				obj.resetAll();
 			}
+
+			lubee::CheckSerialization(obj._rflag);
 		}
 	}
 }

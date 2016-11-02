@@ -38,6 +38,9 @@ namespace spi {
 		private:
 			mutable AcCounter_t ac_counter[sizeof...(Ts)];
 			mutable Counter_t user_counter[sizeof...(Ts)];
+
+			template <class Ar, class C, class G, class... T>
+			friend void serialize(Ar&, AcWrapper<C,G,T...>&);
 		public:
 			template <class... Args>
 			explicit AcWrapper(Args&&... args):
@@ -61,8 +64,7 @@ namespace spi {
 						static_cast<const CacheVal_t&>(w);
 			}
 			bool operator != (const AcWrapper& w) const noexcept {
-				return static_cast<const CacheVal_t&>(*this) !=
-						static_cast<const CacheVal_t&>(w);
+				return !(this->operator == (w));
 			}
 			template <class Type>
 			AcCounter_t& refAc() const {
@@ -119,6 +121,14 @@ namespace spi {
 			friend void serialize(Ar&, RFlag<C,T...>&);
 		public:
 			using ct_base = ::lubee::Types<Ts...>;
+			// デバッグ用
+			bool operator == (const RFlag& rf) const noexcept {
+				return _rflag == rf._rflag &&
+					static_cast<const base_t&>(*this) == static_cast<const base_t&>(rf);
+			}
+			bool operator != (const RFlag& rf) const noexcept {
+				return !(this->operator == (rf));
+			}
 		private:
 			//! 整数const型
 			template <int N>

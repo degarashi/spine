@@ -10,6 +10,8 @@ namespace spi {
 
 		template <class Ar, class... Ts0>
 		friend void serialize(Ar&, ValueHolder<Ts0...>&);
+		bool operator == (const ValueHolder&) const noexcept { return true; }
+		bool operator != (const ValueHolder&) const noexcept { return false; }
 	};
 	template <class T, class... Ts>
 	struct ValueHolder<T, Ts...> : ValueHolder<Ts...> {
@@ -32,6 +34,13 @@ namespace spi {
 			return base_t::cref((T2*)nullptr);
 		}
 
+		bool operator == (const ValueHolder& v) const noexcept {
+			return value == v.value &&
+				static_cast<const base_t&>(*this) == static_cast<const base_t&>(v);
+		}
+		bool operator != (const ValueHolder& v) const noexcept {
+			return !(this->operator == (v));
+		}
 		template <class Ar, class T0, class... Ts0>
 		friend void serialize(Ar&, ValueHolder<T0,Ts0...>&);
 	};
