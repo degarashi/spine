@@ -10,7 +10,7 @@ namespace spi {
 		using NVPair = std::vector<std::pair<typename Mgr::key_t, typename Mgr::shared_t>>;
 		// 一旦shared_ptrに変換
 		NVPair nv;
-		for(auto& r : mgr._resource)
+		for(auto& r : mgr._resource->map)
 			nv.emplace_back(r.first, r.second.weak.lock());
 		ar(nv);
 		ar(mgr._acounter);
@@ -23,11 +23,13 @@ namespace spi {
 		NVPair nv;
 		ar(nv);
 
-		mgr._resource.clear();
-		mgr._v2k.clear();
+		auto& map = mgr._resource->map;
+		auto& v2k = mgr._resource->v2k;
+		map.clear();
+		v2k.clear();
 		for(auto& n : nv) {
-			auto ret = mgr._resource.emplace(n.first, n.second);
-			mgr._v2k[n.second.get()] = n.first;
+			auto ret = map.emplace(n.first, n.second);
+			v2k[n.second.get()] = n.first;
 		}
 		ar(mgr._acounter);
 	}

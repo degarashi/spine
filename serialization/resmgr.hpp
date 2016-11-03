@@ -10,7 +10,7 @@ namespace spi {
 		using SPV = std::vector<typename Mgr::shared_t>;
 		// 一旦shared_ptrに変換
 		SPV spv;
-		for(auto& r : mgr._resource)
+		for(auto& r : mgr._resource->set)
 			spv.emplace_back(r.weak.lock());
 		ar(spv);
 	}
@@ -22,8 +22,9 @@ namespace spi {
 		SPV spv;
 		ar(spv);
 
-		mgr._resource.clear();
+		auto& set = mgr._resource->set;
+		set.clear();
 		for(auto& s : spv)
-			mgr._resource.emplace(s);
+			set.emplace(s);
 	}
 }

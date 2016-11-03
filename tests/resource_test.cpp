@@ -177,10 +177,11 @@ namespace spi {
 								r = mgr.template emplaceWithType<rawvalue_t>(key, val);
 						} else {
 							bool flag = false;
-							r = mgr.acquireWithMake(key,
-									[&flag, val](auto&&){
+							r = mgr.template acquireWithMake<rawvalue_t>(
+									key,
+									[&flag, val](auto& /*key*/, auto&& mk){
 										flag = true;
-										return new rawvalue_t(val);
+										mk(val);
 									}
 								);
 							ASSERT_TRUE(flag);
@@ -196,7 +197,7 @@ namespace spi {
 						res_t ret;
 						switch(mtf({0,2})) {
 							case 0:
-								ret = mgr.acquireA(new rawvalue_t(val));
+								ret = mgr.template acquireA<rawvalue_t>(val);
 								break;
 							case 1:
 								ret = mgr.emplaceA(val);

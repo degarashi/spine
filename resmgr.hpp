@@ -9,7 +9,7 @@ namespace spi {
 		中身の保持はすべてスマートポインタで行う
 		シングルスレッド動作
 	*/
-	template <class T>
+	template <class T, class Allocator=std::allocator<T>>
 	class ResMgr {
 		public:
 			using value_t = T;
@@ -23,11 +23,16 @@ namespace spi {
 			using this_t = ResMgr<T>;
 			using tag_t = ResTag<value_t>;
 
-			using Resource = std::unordered_set<tag_t>;
+			using Set = std::unordered_set<tag_t>;
+			struct Resource {
+				Set			set;
+			};
+			using Resource_SP = std::shared_ptr<Resource>;
+
 			template <bool B>
-			class _iterator : public Resource::iterator {
+			class _iterator : public Set::iterator {
 				public:
-					using base_t = typename Resource::iterator;
+					using base_t = typename Set::iterator;
 					using base_t::base_t;
 					using v_t = std::conditional_t<B, const value_t, value_t>;
 					using s_t = std::shared_ptr<v_t>;
@@ -41,37 +46,39 @@ namespace spi {
 			using iterator = _iterator<false>;
 			using const_iterator = _iterator<true>;
 
-			Resource	_resource;
+			Resource_SP		_resource;
 
-			void _release(value_t* p) noexcept {
-				const auto itr = _resource.find(p);
+			template <class P>
+			static void _Release(const Resource_SP& r, P *const p) noexcept {
+				auto& set = r->set;
+				typename Allocator::template rebind<P>::other alc;
+				const auto itr = set.find(p);
 				try {
-					Assert0(itr != _resource.end());
-					_resource.erase(itr);
-					p->~value_t();
+					Assert0(itr != set.end());
+					set.erase(itr);
+					alc.destroy(p);
+					alc.deallocate(p, 1);
 				} catch(...) {}
 			}
-			using DeleteF = std::function<void (value_t*)>;
-			const DeleteF	_deleter;
 		public:
 			ResMgr():
-				_deleter([this](value_t* p){
-					this->_release(p);
-				})
+				_resource(std::make_shared<Resource>())
 			{}
-			iterator begin() noexcept { return _resource.begin(); }
-			iterator end() noexcept { return _resource.end(); }
-			const_iterator begin() const noexcept { return _resource.begin(); }
-			const_iterator end() const noexcept { return _resource.end(); }
-			const_iterator cbegin() const noexcept { return _resource.cbegin(); }
-			const_iterator cend() const noexcept { return _resource.cend(); }
+			iterator begin() noexcept { return _resource->set.begin(); }
+			iterator end() noexcept { return _resource->set.end(); }
+			const_iterator begin() const noexcept { return _resource->set.begin(); }
+			const_iterator end() const noexcept { return _resource->set.end(); }
+			const_iterator cbegin() const noexcept { return _resource->set.cbegin(); }
+			const_iterator cend() const noexcept { return _resource->set.cend(); }
 
 			// (主にデバッグ用)
 			bool operator == (const ResMgr& m) const noexcept {
-				if(_resource.size() == m._resource.size()) {
-					auto itr0 = _resource.begin(),
-						 itr1 = m._resource.begin();
-					while(itr0 != _resource.end()) {
+				auto	&s0 = _resource->set,
+						&s1 = m._resource->set;
+				if(s0.size() == s1.size()) {
+					auto itr0 = s0.begin(),
+						 itr1 = s1.begin();
+					while(itr0 != s0.end()) {
 						if(*itr0 != *itr1)
 							return false;
 						++itr0;
@@ -84,26 +91,25 @@ namespace spi {
 			bool operator != (const ResMgr& m) const noexcept {
 				return !(this->operator == (m));
 			}
-			auto _acquire(value_t* ptr) {
-				shared_t sp(ptr, _deleter);
+			template <class T2=value_t, class... Ts>
+			auto emplace(Ts&&... ts) {
+				typename Allocator::template rebind<T2>::other alc;
+				T2 *const ptr = alc.allocate(1);
+				alc.construct(ptr, std::forward<Ts>(ts)...);
+				std::shared_ptr<T2> sp(
+					ptr,
+					[r=_resource](T2 *const p){
+						_Release(r, p);
+					}
+				);
+				D_Assert0(_resource->set.count(tag_t(sp.get())) == 0);
+
 				// リソース管理のためのリスト登録
-				_resource.emplace(sp);
+				_resource->set.emplace(sp);
 				return sp;
 			}
-			template <class T2, class... Ts>
-			auto emplaceWithType(Ts&&... ts) {
-				return _acquire(new T2(std::forward<Ts>(ts)...));
-			}
-			template <class... Ts>
-			auto emplace(Ts&&... ts) {
-				return emplaceWithType<value_t>(std::forward<Ts>(ts)...);
-			}
-			auto acquire(value_t* ptr) {
-				D_Assert0(_resource.count(tag_t(ptr)) == 0);
-				return _acquire(ptr);
-			}
 			std::size_t size() const noexcept {
-				return _resource.size();
+				return _resource->set.size();
 			}
 	};
 }
