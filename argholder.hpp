@@ -1,3 +1,4 @@
+#pragma once
 #include "lubee/error.hpp"
 #include "lubee/meta/enable_if.hpp"
 
