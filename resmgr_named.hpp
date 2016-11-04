@@ -79,6 +79,10 @@ namespace spi {
 			template <class Ar, class T2, class K2>
 			friend void load(Ar&, ResMgrName<T2,K2>&);
 
+			template <class T2>
+			auto _getDeleter() {
+				return [r=_resource](T2 *const p){ _Release(r, p); };
+			}
 		protected:
 			//! 継承先のクラスでキーの改変をする必要があればこれをオーバーライドする
 			virtual void _modifyResourceName(key_t& /*key*/) const {}
@@ -144,9 +148,7 @@ namespace spi {
 				auto& res = *_resource;
 				std::shared_ptr<T2> sp(
 					ctor.pointer,
-					[r=_resource](T2 *const p){
-						_Release(r, p);
-					}
+					_getDeleter<T2>()
 				);
 				res.map.emplace(tk, sp);
 				res.v2k.emplace(sp.get(), tk);
