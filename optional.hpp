@@ -11,7 +11,7 @@ namespace spi {
 
 	template <class... Ts>
 	auto construct(Ts&&... ts) {
-		return ArgHolder<Ts...>(std::forward<Ts>(ts)...);
+		return ArgHolder<decltype(ts)...>(std::forward<Ts>(ts)...);
 	}
 	template <class P>
 	using IsRP = std::integral_constant<bool, std::is_reference<P>{} || std::is_pointer<P>{}>;
@@ -58,14 +58,6 @@ namespace spi {
 				return *this;
 			}
 			#undef NOEXCEPT_WHEN_RAW
-			template <class... Ts>
-			void operator = (ArgHolder<Ts...>&& ah) {
-				void* ptr = _data;
-				const auto fn = [ptr](Ts... ts) {
-					new(ptr) T(ts...);
-				};
-				ah.inorder(fn);
-			}
 			template <class Ar, class T2>
 			friend void serialize(Ar&, Buffer<T2>&);
 		};
@@ -243,8 +235,14 @@ namespace spi {
 				return *this;
 			}
 			template <class... Ts>
-			Optional& operator = (ArgHolder<Ts...>&& t) {
-				_buffer = std::move(t);
+			Optional& operator = (ArgHolder<Ts...>&& ah) {
+				if(_bInit)
+					_release();
+				const auto fn = [&buff = _buffer](auto&&... ts) {
+					buff.ctor(std::forward<decltype(ts)>(ts)...);
+				};
+				ah.inorder(fn);
+				_bInit = true;
 				return *this;
 			}
 			template <class T2, ENABLE_IF((is_optional<std::decay_t<T2>>{}))>

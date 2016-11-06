@@ -46,7 +46,7 @@ namespace spi {
 		{}
 
 		template <class T0A, class... TsA>
-		ArgHolder(T0A&& t0, TsA&&... tsa):
+		explicit ArgHolder(T0A&& t0, TsA&&... tsa):
 			_value(std::forward<T0A>(t0)),
 			_other(std::forward<TsA>(tsa)...)
 		{}
