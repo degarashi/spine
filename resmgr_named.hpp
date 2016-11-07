@@ -135,9 +135,10 @@ namespace spi {
 
 			// ---- 名前付きリソース作成 ----
 			template <class T2, class Make>
-			auto acquireWithMake(const key_t& k, Make&& make) {
+			auto acquireWithMake(const key_t& k, Make&& make, bool bMod=true) {
 				key_t tk(k);
-				_modifyResourceName(tk);
+				if(bMod)
+					_modifyResourceName(tk);
 				// 既に同じ名前でリソースを確保済みならばそれを返す
 				if(auto ret = get(tk))
 					return std::make_pair(std::static_pointer_cast<T2>(ret), false);
@@ -158,7 +159,7 @@ namespace spi {
 			auto emplaceWithType(const key_t& k, Ts&&... ts) {
 				return acquireWithMake<T2>(k, [&ts...](auto& /*key*/, auto&& mk){
 					mk(std::forward<Ts>(ts)...);
-				});
+				}, true);
 			}
 			template <class... Ts>
 			auto emplace(const key_t& k, Ts&&... ts) {
@@ -174,7 +175,7 @@ namespace spi {
 					auto ret = acquireWithMake<P>(key,
 								[&ts...](auto& /*key*/, auto&& mk){
 									mk(std::forward<Ts>(ts)...);
-								});
+								}, false);
 					if(ret.second)
 						return ret.first;
 				}
