@@ -13,7 +13,7 @@ namespace spi {
 	template <
 		class T,
 		class K = std::string,
-		class Allocator = std::allocator<std::pair<const T, K>>
+		class Allocator = std::allocator<T>
 	>
 	class ResMgrName {
 		public:
