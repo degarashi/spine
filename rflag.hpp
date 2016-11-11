@@ -51,12 +51,12 @@ namespace spi {
 				for(auto& a : user_counter)
 					a = ~0;
 			}
-			AcWrapper& operator = (const CacheVal_t& t) {
-				static_cast<CacheVal_t&>(*this) = t;
-				return *this;
-			}
-			AcWrapper& operator = (CacheVal_t&& t) {
-				static_cast<CacheVal_t&>(*this) = std::move(t);
+			template <
+				class T,
+				ENABLE_IF((std::is_assignable<CacheVal_t, T>{}))
+			>
+			AcWrapper& operator = (T&& t) {
+				static_cast<CacheVal_t&>(*this) = std::forward<T>(t);
 				return *this;
 			}
 			bool operator == (const AcWrapper& w) const noexcept {
