@@ -71,6 +71,9 @@ namespace spi {
 			const_iterator cbegin() const noexcept { return _resource->set.cbegin(); }
 			const_iterator cend() const noexcept { return _resource->set.cend(); }
 
+			const Resource_SP& getResourceSet() noexcept {
+				return _resource;
+			}
 			// (主にデバッグ用)
 			bool operator == (const ResMgr& m) const noexcept {
 				auto	&s0 = _resource->set,
