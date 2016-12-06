@@ -162,8 +162,10 @@ namespace spi {
 			Optional(T2&& v) noexcept(noexcept(!IsRP<T2>{})) :
 				_bInit(v._bInit)
 			{
-				if(_bInit)
+				if(_bInit) {
 					_buffer.ctor(std::forward<T2>(v)._takeOut());
+					v._bInit = false;
+				}
 			}
 			//! デフォルト初期化: 中身は無効　
 			Optional() noexcept: _bInit(false) {}
