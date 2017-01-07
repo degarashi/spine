@@ -134,6 +134,7 @@ namespace spi {
 			(AcquireExist)
 			(FindByName)
 			(FindByHandle)
+			(Replace)
 		);
 		TYPED_TEST(ResourceMgrName, General) {
 			USING(key_t);
@@ -244,6 +245,47 @@ namespace spi {
 							ASSERT_EQ(*key0, *key1);
 							const auto res0 = mgr.get(*key0);
 							ASSERT_EQ(itr->second.res, res0);
+						}
+						break;
+					case ActionN::Replace:
+						if(!res.empty()) {
+							const auto itr = pickRandom();
+							const auto old = itr->second;
+							res.erase(itr);
+							key_t oldkey;
+
+							key_t key(old.key);
+							const auto val = rv();
+							std::pair<res_t,bool> r;
+							switch(mtf({0,2})) {
+								case 0:
+									r = mgr.template replaceWithMake<rawvalue_t>(
+											old.key,
+											[&val](auto& /*k*/, auto&& mk){
+												mk(val);
+											},
+											&oldkey
+										);
+									break;
+
+								case 1:
+									r = mgr.template replaceEmplaceWithType<rawvalue_t>(
+											old.key,
+											&oldkey,
+											val
+										);
+									break;
+								case 2:
+									r = mgr.template replaceEmplace(
+											old.key,
+											&oldkey,
+											val
+										);
+									break;
+							}
+							ASSERT_TRUE(r.second);
+							res.emplace(oldkey, Res{oldkey, old.res, old.val});
+							res.emplace(key, Res{key, r.first, val});
 						}
 						break;
 				}
