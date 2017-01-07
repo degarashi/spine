@@ -146,6 +146,12 @@ namespace spi {
 			const value_t& _takeOut() const& noexcept {
 				return get();
 			}
+			constexpr bool isRvalue() && noexcept {
+				return true;
+			}
+			constexpr bool isRvalue() const& noexcept {
+				return false;
+			}
 
 		public:
 			const static struct _AsInitialized{} AsInitialized;
@@ -159,12 +165,14 @@ namespace spi {
 				_bInit(true)
 			{}
 			template <class T2, ENABLE_IF((is_optional<std::decay_t<T2>>{}))>
-			Optional(T2&& v) noexcept(noexcept(!IsRP<T2>{})) :
+			Optional(T2&& v) noexcept(noexcept(!IsRP<T2>{})):
 				_bInit(v._bInit)
 			{
 				if(_bInit) {
+					const bool bR = std::forward<T2>(v).isRvalue();
 					_buffer.ctor(std::forward<T2>(v)._takeOut());
-					v._bInit = false;
+					if(bR)
+						v._bInit = false;
 				}
 			}
 			//! デフォルト初期化: 中身は無効　
