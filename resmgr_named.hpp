@@ -66,10 +66,11 @@ namespace spi {
 					alc.deallocate(p, 1);
 				} catch(...) {}
 			}
+			const static key_t s_anonymousPrefix;
 			// 無名リソースを作成する際の通し番号
 			uint64_t _acounter;
 			key_t _makeAKey() {
-				key_t key("__anonymous__");
+				key_t key(s_anonymousPrefix);
 				key += std::to_string(_acounter++);
 				return key;
 			}
@@ -79,6 +80,20 @@ namespace spi {
 			template <class Ar, class T2, class K2>
 			friend void load(Ar&, ResMgrName<T2,K2>&);
 
+			static bool _HasAnonymousPrefix(const key_t& s) {
+				if(s.length() >= s_anonymousPrefix.length()) {
+					auto itr0 = s.cbegin(),
+						 itr1 = s_anonymousPrefix.cbegin();
+					do {
+						if(*itr0 != *itr1)
+							return false;
+						++itr0;
+						++itr1;
+					} while(itr1 != s_anonymousPrefix.cend());
+					return true;
+				}
+				return false;
+			}
 			template <class T2>
 			auto _getDeleter() {
 				return [r=_resource](T2 *const p){ _Release(r, p); };
@@ -135,9 +150,9 @@ namespace spi {
 
 			// ---- 名前付きリソース作成 ----
 			template <class T2, class Make>
-			auto acquireWithMake(const key_t& k, Make&& make, bool bMod=true) {
+			auto acquireWithMake(const key_t& k, Make&& make) {
 				key_t tk(k);
-				if(bMod)
+				if(!_HasAnonymousPrefix(tk))
 					_modifyResourceName(tk);
 				// 既に同じ名前でリソースを確保済みならばそれを返す
 				if(auto ret = get(tk))
@@ -159,7 +174,7 @@ namespace spi {
 			auto emplaceWithType(const key_t& k, Ts&&... ts) {
 				return acquireWithMake<T2>(k, [&ts...](auto& /*key*/, auto&& mk){
 					mk(std::forward<Ts>(ts)...);
-				}, true);
+				});
 			}
 			template <class... Ts>
 			auto emplace(const key_t& k, Ts&&... ts) {
@@ -175,7 +190,7 @@ namespace spi {
 					auto ret = acquireWithMake<P>(key,
 								[&ts...](auto& /*key*/, auto&& mk){
 									mk(std::forward<Ts>(ts)...);
-								}, false);
+								});
 					if(ret.second)
 						return ret.first;
 				}
@@ -214,4 +229,6 @@ namespace spi {
 				return _resource->map.size();
 			}
 	};
+	template <class T, class K, class A>
+	const typename ResMgrName<T,K,A>::key_t ResMgrName<T,K,A>::s_anonymousPrefix("__anonymous__");
 }
