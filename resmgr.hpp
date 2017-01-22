@@ -33,7 +33,10 @@ namespace spi {
 			class _iterator : public Set::iterator {
 				public:
 					using base_t = typename Set::iterator;
-					using base_t::base_t;
+					_iterator() = default;
+					_iterator(const base_t& b):
+						base_t(b)
+					{}
 					using v_t = std::conditional_t<B, const value_t, value_t>;
 					using s_t = std::shared_ptr<v_t>;
 					s_t operator *() const {
