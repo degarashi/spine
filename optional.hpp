@@ -4,11 +4,9 @@
 #include "lubee/none.hpp"
 #include "argholder.hpp"
 #include <utility>
+#include "none.hpp"
 
 namespace spi {
-	using none_t = lubee::none_t;
-	const static none_t none;
-
 	template <class... Ts>
 	auto construct(Ts&&... ts) {
 		return ArgHolder<decltype(ts)...>(std::forward<Ts>(ts)...);
