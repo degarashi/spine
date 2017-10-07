@@ -1,6 +1,6 @@
 #pragma once
 #include "restag.hpp"
-#include "singleton.hpp"
+#include "lubee/error.hpp"
 #include <unordered_set>
 
 namespace spi {
