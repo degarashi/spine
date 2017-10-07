@@ -56,12 +56,16 @@ namespace spi {
 				auto& set = r->set;
 				typename Allocator::template rebind<P>::other alc;
 				const auto itr = set.find(p);
+				D_Assert0(itr != set.end());
 				try {
-					Assert0(itr != set.end());
 					set.erase(itr);
 					alc.destroy(p);
 					alc.deallocate(p, 1);
-				} catch(...) {}
+				} catch(const std::exception& e) {
+					AssertF("exception occurred (%s)", e.what());
+				} catch(...) {
+					AssertF("unknown exception occurred");
+				}
 			}
 		public:
 			ResMgr():
