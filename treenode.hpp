@@ -285,7 +285,7 @@ namespace spi {
 			}
 			//! このノード以下を全て複製
 			SP cloneTree(const WP& parent=WP()) const {
-				SP sp = CopyAsSP(static_cast<const T&>(*this));
+				SP sp = std::dynamic_pointer_cast<T>(CopyAsSP(static_cast<const T&>(*this)));
 				if(_spChild)
 					sp->_spChild = _spChild->cloneTree(sp);
 				if(_spSibling) {
