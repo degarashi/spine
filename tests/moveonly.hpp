@@ -1,6 +1,8 @@
 #pragma once
-#include <utility>
 #include "util.hpp"
+#include <utility>
+#include <algorithm>
+#include <cereal/access.hpp>
 
 namespace spi {
 	namespace test {
@@ -54,6 +56,12 @@ namespace spi {
 				void serialize(Ar& ar) {
 					ar(_value);
 				}
+				template <class Ar>
+				static void load_and_construct(Ar& ar, cereal::construct<MoveOnly>& cs) {
+					value_t val;
+					ar(val);
+					cs(val);
+				}
 		};
 
 		template <class T>
@@ -61,4 +69,12 @@ namespace spi {
 			ModifyValue(t.get());
 		}
 	}
+}
+namespace std {
+	template <class T>
+	struct hash<spi::test::MoveOnly<T>> {
+		std::size_t operator()(const spi::test::MoveOnly<T>& m) const noexcept {
+			return std::hash<T>()(m.get());
+		}
+	};
 }
