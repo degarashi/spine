@@ -131,6 +131,7 @@ namespace spi {
 			bool	_bInit;
 
 			void _force_release() noexcept {
+				D_Assert0(_bInit);
 				_buffer.dtor();
 				_bInit = false;
 			}
@@ -157,13 +158,28 @@ namespace spi {
 			/*! ユーザーが自分でコンストラクタを呼ばないとエラーになる */
 			Optional(_AsInitialized) noexcept: _bInit(true) {}
 
+			Optional(const Optional& opt):
+				_bInit(opt._bInit)
+			{
+				if(_bInit) {
+					_buffer.ctor(opt._buffer.get());
+				}
+			}
+			Optional(Optional&& opt) noexcept:
+				_bInit(opt._bInit)
+			{
+				if(_bInit) {
+					_buffer.ctor(std::move(opt)._takeOut());
+					opt._bInit = false;
+				}
+			}
 			template <class T2, ENABLE_IF(!(is_optional<std::decay_t<T2>>{}))>
-			Optional(T2&& v) noexcept(noexcept(!IsRP<T2>{})):
+			Optional(T2&& v) noexcept(!IsRP<T2>{}):
 				_buffer(std::forward<T2>(v)),
 				_bInit(true)
 			{}
 			template <class T2, ENABLE_IF((is_optional<std::decay_t<T2>>{}))>
-			Optional(T2&& v) noexcept(noexcept(!IsRP<T2>{})):
+			Optional(T2&& v) noexcept(!IsRP<T2>{}):
 				_bInit(v._bInit)
 			{
 				if(_bInit) {
@@ -264,7 +280,9 @@ namespace spi {
 				return *this;
 			}
 			template <class Ar, class T2>
-			friend void serialize(Ar&, Optional<T2>&);
+			friend void load(Ar&, Optional<T2>&);
+			template <class Ar, class T2>
+			friend void save(Ar&, const Optional<T2>&);
 	};
 	template <class T>
 	const typename Optional<T>::_AsInitialized Optional<T>::AsInitialized{};

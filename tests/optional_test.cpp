@@ -255,8 +255,9 @@ namespace spi {
 			ASSERT_NO_FATAL_FAILURE(Test_Reference<value_t>(this->makeRVF()));
 		}
 		TYPED_TEST(Optional, Serialization) {
-			::spi::Optional<TypeParam> opt(this->makeRV());
-			lubee::CheckSerialization(opt);
+			using test_t = ::spi::Optional<TypeParam>;
+			test_t opt(this->makeRV());
+			lubee::CheckSerializationWithMake([&opt](){ return new test_t(std::move(opt)); });
 		}
 
 		struct OptionalC : Random {};

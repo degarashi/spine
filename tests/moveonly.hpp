@@ -25,6 +25,7 @@ namespace spi {
 				}
 
 			public:
+				MoveOnly() = default;
 				MoveOnly(const value_t& v): _value(v) {}
 				MoveOnly(value_t&& v) noexcept: _value(std::move(v)) {}
 				MoveOnly(const MoveOnly&) = delete;
