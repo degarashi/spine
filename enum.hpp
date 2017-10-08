@@ -41,7 +41,7 @@
 #define DefineEnumPair_func(r, data, elem) BOOST_PP_SEQ_ELEM(0,elem)=BOOST_PP_SEQ_ELEM(1,elem),
 //! 値を明示的に指定するEnum定義
 /*!
-	DefineEnum(
+	DefineEnumPair(
 		MyEnum,
 		((AAA)(100))
 		((BBB)(200))
