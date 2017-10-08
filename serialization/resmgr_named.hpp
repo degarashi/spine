@@ -28,7 +28,6 @@ namespace spi {
 		map.clear();
 		v2k.clear();
 		for(auto& n : nv) {
-			auto ret = map.emplace(n.first, n.second);
 			v2k[n.second.get()] = n.first;
 		}
 		ar(mgr._acounter);
