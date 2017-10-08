@@ -1,3 +1,7 @@
 .clang
 *.cbp
-*.user
+*.user*
+__pycache__
+*.pyc
+*.kdev4
+*~
