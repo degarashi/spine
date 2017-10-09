@@ -43,7 +43,7 @@ namespace spi {
 				return *ptr();
 			}
 			template <class... Ts>
-			void ctor(Ts&&... ts) {
+			void ctor(Ts&&... ts) noexcept(noexcept(new T(std::forward<Ts>(ts)...))) {
 				new(ptr()) T(std::forward<Ts>(ts)...);
 			}
 			void dtor() noexcept {
@@ -139,16 +139,20 @@ namespace spi {
 				if(_bInit)
 					_force_release();
 			}
-			value_t&& _takeOut() && noexcept {
-				return std::move(get());
-			}
-			const value_t& _takeOut() const& noexcept {
-				return get();
-			}
 			constexpr bool isRvalue() && noexcept {
 				return true;
 			}
 			constexpr bool isRvalue() const& noexcept {
+				return false;
+			}
+			template <class T2>
+			bool _construct(std::true_type, T2&& t) {
+				_buffer.ctor(std::forward<T2>(t));
+				return true;
+			}
+			template <class T2>
+			bool _construct(std::false_type, T2&&) {
+				_buffer.ctor();
 				return false;
 			}
 
@@ -156,7 +160,9 @@ namespace spi {
 			const static struct _AsInitialized{} AsInitialized;
 			//! コンストラクタは呼ばないが初期化された物として扱う
 			/*! ユーザーが自分でコンストラクタを呼ばないとエラーになる */
-			Optional(_AsInitialized) noexcept: _bInit(true) {}
+			Optional(_AsInitialized) noexcept:
+				_bInit(true)
+			{}
 
 			Optional(const Optional& opt):
 				_bInit(opt._bInit)
@@ -169,30 +175,34 @@ namespace spi {
 				_bInit(opt._bInit)
 			{
 				if(_bInit) {
-					_buffer.ctor(std::move(opt)._takeOut());
+					_buffer.ctor(std::move(opt).get());
 					opt._bInit = false;
 				}
 			}
 			template <class T2, ENABLE_IF(!(is_optional<std::decay_t<T2>>{}))>
-			Optional(T2&& v) noexcept(!IsRP<T2>{}):
+			Optional(T2&& v) noexcept(noexcept(Buffer(std::forward<T2>(v)))):
 				_buffer(std::forward<T2>(v)),
 				_bInit(true)
 			{}
 			template <class T2, ENABLE_IF((is_optional<std::decay_t<T2>>{}))>
-			Optional(T2&& v) noexcept(!IsRP<T2>{}):
+			Optional(T2&& v) noexcept(noexcept(std::declval<Buffer>().ctor(std::forward<T2>(v).get()))):
 				_bInit(v._bInit)
 			{
 				if(_bInit) {
 					const bool bR = std::forward<T2>(v).isRvalue();
-					_buffer.ctor(std::forward<T2>(v)._takeOut());
+					_buffer.ctor(std::forward<T2>(v).get());
 					if(bR)
 						v._bInit = false;
 				}
 			}
 			//! デフォルト初期化: 中身は無効　
-			Optional() noexcept: _bInit(false) {}
+			Optional() noexcept:
+				_bInit(false)
+			{}
 			//! none_tを渡して初期化するとデフォルトと同じ挙動
-			Optional(none_t) noexcept: Optional() {}
+			Optional(none_t) noexcept:
+				Optional()
+			{}
 			~Optional() {
 				_release();
 			}
@@ -205,10 +215,15 @@ namespace spi {
 			decltype(auto) get() && noexcept {
 				return std::move(_buffer.get());
 			}
-			decltype(auto) operator * () & noexcept { return get(); }
-			decltype(auto) operator * () const& noexcept { return get(); }
-			decltype(auto) operator * () && noexcept { return std::move(get()); }
-
+			decltype(auto) operator * () & noexcept {
+				return get();
+			}
+			decltype(auto) operator * () const& noexcept {
+				return get();
+			}
+			decltype(auto) operator * () && noexcept {
+				return std::move(get());
+			}
 			explicit operator bool () const noexcept {
 				return _bInit;
 			}
@@ -234,16 +249,6 @@ namespace spi {
 				_release();
 				return *this;
 			}
-			template <class T2>
-			bool construct(std::true_type, T2&& t) {
-				_buffer.ctor(std::forward<T2>(t));
-				return true;
-			}
-			template <class T2>
-			bool construct(std::false_type, T2&&) {
-				_buffer.ctor();
-				return false;
-			}
 			template <
 				class T2,
 				ENABLE_IF(!(is_optional<std::decay_t<T2>>{}))
@@ -252,7 +257,7 @@ namespace spi {
 				if(!_bInit) {
 					_bInit = true;
 					using CanConstruct = std::is_constructible<value_t, decltype(std::forward<T2>(t))>;
-					if(construct(CanConstruct{}, std::forward<T2>(t)))
+					if(_construct(CanConstruct{}, std::forward<T2>(t)))
 						return *this;
 				}
 				_buffer = std::forward<T2>(t);
