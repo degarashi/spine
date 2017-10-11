@@ -26,11 +26,11 @@ namespace spi {
 			return value;
 		}
 		template <class T2>
-		decltype(auto) ref(T2*) noexcept {
+		auto ref(T2*) noexcept -> decltype(base_t::ref((T2*)nullptr)) {
 			return base_t::ref((T2*)nullptr);
 		}
 		template <class T2>
-		decltype(auto) cref(T2*) const noexcept {
+		auto cref(T2*) const noexcept -> decltype(base_t::cref((T2*)nullptr)) {
 			return base_t::cref((T2*)nullptr);
 		}
 
