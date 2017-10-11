@@ -25,6 +25,7 @@ namespace spi {
 				private:
 					using base_t = Base;
 				public:
+					using this_t = IteratorBase<Data, Base>;
 					using base_t::base_t;
 					using value_type = Data;
 					using pointer = typename RemoveRef<Data>::pointer;
@@ -34,11 +35,49 @@ namespace spi {
 					IteratorBase(const base_t& base):
 						base_t(base)
 					{}
-					pointer operator ->() const {
+					pointer operator ->() const noexcept {
 						return &this->operator *();
 					}
-					reference operator *() const {
+					reference operator *() const noexcept {
 						return (reference)base_t::operator*();
+					}
+					this_t& operator -- () noexcept {
+						base_t::operator --();
+						return *this;
+					}
+					this_t operator -- (const int) const noexcept {
+						const this_t ret = *this;
+						this->operator --();
+						return ret;
+					}
+					this_t& operator ++ () noexcept {
+						base_t::operator ++();
+						return *this;
+					}
+					this_t operator ++ (const int) const noexcept {
+						const this_t ret = *this;
+						this->operator ++();
+						return ret;
+					}
+					this_t operator + (const int n) const noexcept {
+						this_t ret = *this;
+						ret += n;
+						return ret;
+					}
+					this_t operator - (const int n) const noexcept {
+						this_t ret = *this;
+						ret -= n;
+						return ret;
+					}
+					using base_t::operator -;
+
+					this_t& operator += (const int n) noexcept {
+						base_t::operator += (n);
+						return *this;
+					}
+					this_t& operator -= (const int n) noexcept {
+						base_t::operator -= (n);
+						return *this;
 					}
 			};
 		}
