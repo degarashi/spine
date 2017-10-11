@@ -139,12 +139,6 @@ namespace spi {
 				if(_bInit)
 					_force_release();
 			}
-			constexpr bool isRvalue() && noexcept {
-				return true;
-			}
-			constexpr bool isRvalue() const& noexcept {
-				return false;
-			}
 			template <class T2>
 			bool _construct(std::true_type, T2&& t) {
 				_buffer.ctor(std::forward<T2>(t));
@@ -154,6 +148,10 @@ namespace spi {
 			bool _construct(std::false_type, T2&&) {
 				_buffer.ctor();
 				return false;
+			}
+			void _invalidate_if_rvalue() const& noexcept {}
+			void _invalidate_if_rvalue() && noexcept {
+				_bInit = false;
 			}
 
 		public:
@@ -189,10 +187,8 @@ namespace spi {
 				_bInit(v._bInit)
 			{
 				if(_bInit) {
-					const bool bR = std::forward<T2>(v).isRvalue();
 					_buffer.ctor(std::forward<T2>(v).get());
-					if(bR)
-						v._bInit = false;
+					v._invalidate_if_rvalue();
 				}
 			}
 			//! デフォルト初期化: 中身は無効　
@@ -275,14 +271,27 @@ namespace spi {
 				return *this;
 			}
 			template <class T2, ENABLE_IF((is_optional<std::decay_t<T2>>{}))>
-			Optional& operator = (T2&& t) noexcept(Is_RP) {
+			Optional& _assign_operator(T2&& t) noexcept(Is_RP) {
 				if(!t)
 					_release();
 				else {
-					_bInit = true;
+					if(!_bInit) {
+						_bInit = true;
+						_buffer.ctor();
+					}
 					_buffer = std::forward<T2>(t).get();
 				}
 				return *this;
+			}
+			template <class T2, ENABLE_IF((is_optional<std::decay_t<T2>>{}))>
+			Optional& operator = (T2&& t) noexcept(Is_RP) {
+				return _assign_operator(std::forward<T2>(t));
+			}
+			Optional& operator = (const Optional& opt) {
+				return _assign_operator(opt);
+			}
+			Optional& operator = (Optional&& opt) noexcept {
+				return _assign_operator(std::move(opt));
 			}
 			template <class Ar, class T2>
 			friend void load(Ar&, Optional<T2>&);
