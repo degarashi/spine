@@ -327,12 +327,13 @@ namespace spi {
 				return depth;
 			}
 	};
-	template <class T0, class T1, class CMP>
-	bool _CompareTree(const TreeNode<T0>& t0, const TreeNode<T1>& t1, CMP&& cmp) {
-		auto fnParentIndex = [](const auto& ar, const auto& p){
+	template <class T0, class T1, class CMP = std::equal_to<>>
+	bool CompareTree(const TreeNode<T0>& t0, const TreeNode<T1>& t1, const CMP& cmp = CMP()) {
+		const auto fnParentIndex = [](const auto& ar, const auto& p){
 			if(!p)
 				return ar.end() - ar.begin();
-			auto itr = std::find_if(ar.begin(), ar.end(), [&p](auto& r){ return r == p.get(); });
+			const auto itr = std::find_if(ar.begin(), ar.end(),
+					[&p](const auto& r){ return r == p.get(); });
 			return itr - ar.begin();
 		};
 		// 配列化して親ノード番号をチェック
@@ -345,7 +346,7 @@ namespace spi {
 			// 親ノード番号
 			const int idx0 = fnParentIndex(ar0, ar0[i]->getParent()),
 						idx1 = fnParentIndex(ar1, ar1[i]->getParent());
-			if(idx0!=idx1 || !cmp(ar0[i], ar1[i]))
+			if(idx0!=idx1 || !cmp(*ar0[i], *ar1[i]))
 				return false;
 		}
 		return true;
@@ -353,15 +354,7 @@ namespace spi {
 	// ツリー構造のみを比較する
 	template <class T0, class T1>
 	bool CompareTreeStructure(const TreeNode<T0>& t0, const TreeNode<T1>& t1) {
-		return _CompareTree(t0, t1, [](auto&,auto&){ return true; });
-	}
-	//! データも含めて比較
-	template <class T0, class T1>
-	bool CompareTree(const TreeNode<T0>& t0, const TreeNode<T1>& t1) {
-		auto cmp = [](auto& sp0, auto& sp1){
-			return *sp0 == *sp1;
-		};
-		return _CompareTree(t0, t1, cmp);
+		return CompareTree(t0, t1, [](auto&,auto&){ return true; });
 	}
 	template <class T>
 	inline std::ostream& operator << (std::ostream& os, const TreeNode<T>& t) {
