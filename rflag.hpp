@@ -118,7 +118,9 @@ namespace spi {
 			mutable RFlagValue_t _rflag;
 
 			template <class Ar, class C, class... T>
-			friend void serialize(Ar&, RFlag<C,T...>&);
+			friend void save(Ar&, const RFlag<C,T...>&);
+			template <class Ar, class C, class... T>
+			friend void load(Ar&, RFlag<C,T...>&);
 		public:
 			using ct_base = ::lubee::Types<Ts...>;
 			// デバッグ用
@@ -212,6 +214,22 @@ namespace spi {
 			template <class T, class... TsA>
 			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<T,TsA...>) noexcept {
 				return _UpperMaskAndMe_If<T>(IsAcWrapper<typename T::value_t>()) | _CalcAcFlag(lubee::Types<TsA...>());
+			}
+
+			// シリアライズ用。最下層のレイヤーのみを巡回
+			template <class CB>
+			void __iterateLowestLayer(CB&&, lubee::Types<>) {}
+			template <class CB, class T0, class... TsA>
+			void __iterateLowestLayer(CB&& cb, lubee::Types<T0, TsA...>) {
+				if(T0::size == 0) {
+					constexpr int pos = ct_base::template Find<T0>;
+					cb(ref<T0>(), _accum[pos]);
+				}
+				__iterateLowestLayer(cb, lubee::Types<TsA...>());
+			}
+			template <class CB>
+			void _iterateLowestLayer(CB&& cb) {
+				__iterateLowestLayer(cb, ct_base());
 			}
 
 			template <class... TsA>
