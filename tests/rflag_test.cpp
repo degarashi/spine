@@ -120,7 +120,7 @@ namespace spi {
 									ActW = lubee::bit::LowClear(static_cast<unsigned int>(Action::_Num)) << 1,
 									ActB = lubee::bit::MSB(ActW);
 				using RF = std::decay_t<decltype(_rflag)>;
-				constexpr static RFlagValue_t LowFlag = RF::template Get<Value0, Value1, Value2, Value3>();
+				constexpr static RFlagValue_t LowFlag = RF::template FlagMask<Value0, Value1, Value2, Value3>();
 
 			private:
 				using Values = typename Cache_t::template AsTArgs<ValueHolder>;
@@ -136,19 +136,19 @@ namespace spi {
 				template <class T>
 				using AcV = std::decay_t<decltype(AcWrapperValue(_value.cref((T*)nullptr)))>;
 				AcV<Value01> _calcValue(Value01*) const {
-					if(_setflag & RF::template Get<Value01>() & ~RF::ACFlag)
+					if(_setflag & RF::template FlagMask<Value01>() & ~RF::ACFlag)
 						return _value.cref((Value01*)nullptr);
 					return _calcValue((Value0*)nullptr)
 							+ _calcValue((Value1*)nullptr);
 				}
 				AcV<Value02> _calcValue(Value02*) const {
-					if(_setflag & RF::template Get<Value02>() & ~RF::ACFlag)
+					if(_setflag & RF::template FlagMask<Value02>() & ~RF::ACFlag)
 						return _value.cref((Value02*)nullptr);
 					return _calcValue((Value0*)nullptr)
 							- _calcValue((Value2*)nullptr);
 				}
 				AcV<Value01_02_3> _calcValue(Value01_02_3*) const {
-					if(_setflag & RF::template Get<Value01_02_3>() & ~RF::ACFlag)
+					if(_setflag & RF::template FlagMask<Value01_02_3>() & ~RF::ACFlag)
 						return _value.cref((Value01_02_3*)nullptr);
 					return _calcValue((Value01*)nullptr)
 							* _calcValue((Value02*)nullptr)
@@ -165,7 +165,7 @@ namespace spi {
 				template <class Tag>
 				void _updateSetflag() {
 					_setflag &= ~RF::template OrLH<Tag>();
-					_setflag |= RF::template Get<Tag>();
+					_setflag |= RF::template FlagMask<Tag>();
 					ASSERT_EQ(0, _setflag & _rflag.getFlag() & ~LowFlag & ~RF::ACFlag);
 				}
 				// Set<Tag>の動作をチェック
@@ -178,7 +178,7 @@ namespace spi {
 							// セット後に値を比較
 							obj._rflag.template set<Tag>(val);
 							ASSERT_EQ(val, obj._rflag.template ref<Tag>());
-							if(!(RF::ACFlag & RF::template Get<Tag>())) {
+							if(!(RF::ACFlag & RF::template FlagMask<Tag>())) {
 								// セットした値を取得しても更新はかからない
 								obj._counter = 0;
 								ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
@@ -189,7 +189,7 @@ namespace spi {
 							obj._sync();
 						};
 				}
-				// Get<Tag>の動作をチェック
+				// FlagMask<Tag>の動作をチェック
 				template <class Tag>
 				static ChkFunc _CheckF(IConst<Action::Get>) {
 					return
@@ -223,7 +223,7 @@ namespace spi {
 						[](RFObj& obj){
 							// 適当に値を生成
 							const auto val = obj.template _genValue<typename Tag::value_t>();
-							constexpr auto Flag = RF::template Get<Tag>();
+							constexpr auto Flag = RF::template FlagMask<Tag>();
 							if(Flag & RF::ACFlag) {
 								if(obj._refr.getTestPattern() == 0) {
 									// 常に更新される変数に対するテスト

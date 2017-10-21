@@ -151,7 +151,7 @@ namespace spi {
 			CRef_p<T> _refreshSingle(const Class* self) const {
 				const base_t* ptrC = this;
 				base_t* ptr = const_cast<base_t*>(ptrC);
-				constexpr auto TFlag = Get<T>();
+				constexpr auto TFlag = FlagMask<T>();
 				// 親クラスのRefresh関数を呼ぶ
 				const bool ret = self->_refresh(ptr->ref(_NullPtr<T>()), _NullPtr<T>());
 				// 一緒に更新された変数フラグを立てる
@@ -161,7 +161,7 @@ namespace spi {
 				_rflag |= ACFlag;
 				// 累積カウンタをインクリメント
 				if(ret)
-					++_accum[GetFlagIndex<T>()];
+					++_accum[_GetFlagIndex<T>()];
 				// 変数が更新された場合にはsecondに当該変数のフラグを返す
 				return CRef_p<T>(
 							ptrC->cref(_NullPtr<T>()),
@@ -172,7 +172,7 @@ namespace spi {
 			static constexpr RFlagValue_t _IterateHL0(lubee::Types<>) noexcept { return 0; }
 			template <class T0, class... TsA>
 			static constexpr RFlagValue_t _IterateHL0(lubee::Types<T0,TsA...>) noexcept {
-				return Get<T0>() | _IterateHL0(lubee::Types<TsA...>());
+				return FlagMask<T0>() | _IterateHL0(lubee::Types<TsA...>());
 			}
 
 			//! 上位の変数が使用する下位の変数のフラグを計算
@@ -201,11 +201,10 @@ namespace spi {
 			static constexpr RFlagValue_t _IterateLH() noexcept { return __IterateLH<T>(IConst<0>()); }
 
 			//! 引数の変数フラグをORで合成
-			template <class... TsA>
-			static constexpr RFlagValue_t _Sum(IConst<0>) noexcept { return 0; }
-			template <class TA, class... TsA, int N>
-			static constexpr RFlagValue_t _Sum(IConst<N>) noexcept {
-				return GetSingle<TA>() | _Sum<TsA...>(IConst<N-1>());
+			static constexpr RFlagValue_t _FlagMaskOr(lubee::Types<>) noexcept { return 0; }
+			template <class TA, class... TsA>
+			static constexpr RFlagValue_t _FlagMaskOr(lubee::Types<TA, TsA...>) noexcept {
+				return _FlagMaskSingle<TA>() | _FlagMaskOr(lubee::Types<TsA...>());
 			}
 
 			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<>) noexcept { return 0; }
@@ -220,11 +219,11 @@ namespace spi {
 			void __setFlag(IConst<N>) noexcept {
 				// 自分の階層より上の変数は全てフラグを立てる
 				_rflag |= OrLH<T>();
-				_rflag &= ~Get<T>();
+				_rflag &= ~FlagMask<T>();
 				// Accumulationクラスを継承している変数は常に更新フラグを立てておく
 				_rflag |= ACFlag;
 				// 累積カウンタをインクリメント
-				++_accum[GetFlagIndex<T>()];
+				++_accum[_GetFlagIndex<T>()];
 				__setFlag<TsA...>(IConst<N-1>());
 			}
 			//! 変数に影響するフラグを立てる
@@ -251,7 +250,7 @@ namespace spi {
 				// ユーザー定義の累積カウンタ、システム定義(RFlag)の累積カウンタの何れかが異なっていたらキャッシュフラグを返す
 				if(CompareAndSet<C>(acc.template refUserAc<T>(), G()(v, _NullPtr<T>(), *self)) |
 					CompareAndSet(acc.template refAc<T>(), getAcCounter<T>()))
-					return Get<T>();
+					return FlagMask<T>();
 				return 0;
 			}
 			template <int N, class Acc, class Tup>
@@ -271,48 +270,48 @@ namespace spi {
 				ret.flag = _getWithCheck<0>(self, acc, ret, ((TsA*)nullptr)...);
 				return ret;
 			}
-
-		public:
 			//! 変数型の格納順インデックス
 			template <class TA>
-			static constexpr int GetFlagIndex() noexcept {
+			static constexpr int _GetFlagIndex() noexcept {
 				constexpr int pos = ct_base::template Find<TA>;
 				static_assert(pos>=0, "invalid flag tag");
 				return pos;
 			}
-			//! 変数型を示すフラグ
+			//! 変数型を示すフラグ(単体)
 			template <class TA>
-			static constexpr RFlagValue_t GetSingle() noexcept {
-				return 1 << GetFlagIndex<TA>();
+			static constexpr RFlagValue_t _FlagMaskSingle() noexcept {
+				return 1 << _GetFlagIndex<TA>();
 			}
+
+		public:
 			//! 変数全てを示すフラグ値
 			static constexpr RFlagValue_t All() noexcept {
 				return (1 << (sizeof...(Ts)+1)) -1;
 			}
 			//! 引数の変数を示すフラグ
 			template <class... TsA>
-			static constexpr RFlagValue_t Get() noexcept {
-				return _Sum<TsA...>(IConst<sizeof...(TsA)>());
+			static constexpr RFlagValue_t FlagMask() noexcept {
+				return _FlagMaskOr(lubee::Types<TsA...>());
 			}
 			template <class... TsA>
-			static constexpr RFlagValue_t GetFromTypes(lubee::Types<TsA...>) noexcept {
-				return Get<TsA...>();
+			static constexpr RFlagValue_t FlagMask(lubee::Types<TsA...>) noexcept {
+				return FlagMask<TsA...>();
 			}
 			//! 自分より上の階層のフラグ (Low -> High)
 			template <class T>
 			static constexpr RFlagValue_t OrLH() noexcept {
 				// TypeListを巡回、A::Has<T>ならOr<A>()をたす
-				return Get<T>() | _IterateLH<T>();
+				return FlagMask<T>() | _IterateLH<T>();
 			}
 			//! 自分以下の階層のフラグ (High -> Low)
 			template <class T>
 			static constexpr RFlagValue_t OrHL() noexcept {
-				return Get<T>() | _IterateHL(T());
+				return FlagMask<T>() | _IterateHL(T());
 			}
 			//! 自分以下の階層のフラグ (High -> Low) 直下のみ
 			template <class T>
 			static constexpr RFlagValue_t OrHL0() noexcept {
-				return Get<T>() | _IterateHL0(T());
+				return FlagMask<T>() | _IterateHL0(T());
 			}
 			//! 全てのキャッシュを無効化
 			void resetAll() noexcept {
@@ -354,7 +353,7 @@ namespace spi {
 			//! 累積カウンタ値取得
 			template <class TA>
 			AcCounter_t getAcCounter() const noexcept {
-				return _accum[GetFlagIndex<TA>()];
+				return _accum[_GetFlagIndex<TA>()];
 			}
 
 			//! 更新フラグだけを立てる
@@ -366,7 +365,7 @@ namespace spi {
 			//! フラグのテストだけする
 			template <class... TsA>
 			RFlagValue_t test() const noexcept {
-				return getFlag() & Get<TsA...>();
+				return getFlag() & FlagMask<TsA...>();
 			}
 			//! 更新フラグはそのままに参照を返す
 			template <class T>
@@ -390,7 +389,7 @@ namespace spi {
 			template <class T>
 			CRef_p<T> refresh(const Class* self) const {
 				// 全ての変数が更新済みなら参照を返す
-				if(!(_rflag & Get<T>()))
+				if(!(_rflag & FlagMask<T>()))
 					return CRef_p<T>(base_t::cref(_NullPtr<T>()), 0);
 				// 更新をかけて返す
 				return _refreshSingle<T>(self);
