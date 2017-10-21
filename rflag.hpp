@@ -169,39 +169,31 @@ namespace spi {
 						);
 			}
 			//! 上位の変数が使用する下位の変数のフラグを計算 (直下のノードのみ)
-			template <class T, int N>
-			static constexpr RFlagValue_t __IterateHL0(IConst<N>) noexcept {
-				using T0 = typename T::template At<N>;
-				return Get<T0>() | __IterateHL0<T>(IConst<N-1>());
+			static constexpr RFlagValue_t _IterateHL0(lubee::Types<>) noexcept { return 0; }
+			template <class T0, class... TsA>
+			static constexpr RFlagValue_t _IterateHL0(lubee::Types<T0,TsA...>) noexcept {
+				return Get<T0>() | _IterateHL0(lubee::Types<TsA...>());
 			}
-			template <class T>
-			static constexpr RFlagValue_t __IterateHL0(IConst<-1>) noexcept { return 0; }
-			template <class T>
-			static constexpr RFlagValue_t _IterateHL0() noexcept { return __IterateHL0<T>(IConst<T::size-1>()); }
 
 			//! 上位の変数が使用する下位の変数のフラグを計算
-			template <class T, int N>
-			static constexpr RFlagValue_t __IterateHL(IConst<N>) noexcept {
-				using T0 = typename T::template At<N>;
-				return OrHL<T0>() | __IterateHL<T>(IConst<N-1>());
+			static constexpr RFlagValue_t _IterateHL(lubee::Types<>) noexcept { return 0; }
+			template <class T0, class... TsA>
+			static constexpr RFlagValue_t _IterateHL(lubee::Types<T0,TsA...>) noexcept {
+				return OrHL<T0>() | _IterateHL(lubee::Types<TsA...>());
 			}
-			template <class T>
-			static constexpr RFlagValue_t __IterateHL(IConst<-1>) noexcept { return 0; }
-			template <class T>
-			static constexpr RFlagValue_t _IterateHL() noexcept { return __IterateHL<T>(IConst<T::size-1>()); }
 
 			//! integral_constantの値がtrueなら引数テンプレートのOrLH()を返す
 			template <class T0>
-			static constexpr RFlagValue_t _Add_If(std::false_type) noexcept { return 0; }
+			static constexpr RFlagValue_t _OrLH_If(std::false_type) noexcept { return 0; }
 			template <class T0>
-			static constexpr RFlagValue_t _Add_If(std::true_type) noexcept { return OrLH<T0>(); }
+			static constexpr RFlagValue_t _OrLH_If(std::true_type) noexcept { return OrLH<T0>(); }
 
 			//! 下位の変数に影響される上位の変数のフラグを計算
 			template <class T, int N>
 			static constexpr RFlagValue_t __IterateLH(IConst<N>) noexcept {
 				using T0 = typename ct_base::template At<N>;
 				using T0Has = typename T0::template Has<T>;
-				return _Add_If<T0>(T0Has()) | __IterateLH<T>(IConst<N+1>());
+				return _OrLH_If<T0>(T0Has()) | __IterateLH<T>(IConst<N+1>());
 			}
 			template <class T>
 			static constexpr RFlagValue_t __IterateLH(IConst<ct_base::size>) noexcept { return 0; }
@@ -216,16 +208,10 @@ namespace spi {
 				return GetSingle<TA>() | _Sum<TsA...>(IConst<N-1>());
 			}
 
-			template <class T>
-			constexpr static T ReturnIf(T flag, std::true_type) noexcept { return flag; }
-			template <class T>
-			constexpr static T ReturnIf(T, std::false_type) noexcept { return 0; }
-
-			template <class... TsA>
-			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<TsA...>) noexcept { return 0; }
+			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<>) noexcept { return 0; }
 			template <class T, class... TsA>
 			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<T,TsA...>) noexcept {
-				return ReturnIf(OrLH<T>(), IsAcWrapper<typename T::value_t>()) | _CalcAcFlag(lubee::Types<TsA...>());
+				return _OrLH_If<T>(IsAcWrapper<typename T::value_t>()) | _CalcAcFlag(lubee::Types<TsA...>());
 			}
 
 			template <class... TsA>
@@ -321,12 +307,12 @@ namespace spi {
 			//! 自分以下の階層のフラグ (High -> Low)
 			template <class T>
 			static constexpr RFlagValue_t OrHL() noexcept {
-				return Get<T>() | _IterateHL<T>();
+				return Get<T>() | _IterateHL(T());
 			}
 			//! 自分以下の階層のフラグ (High -> Low) 直下のみ
 			template <class T>
 			static constexpr RFlagValue_t OrHL0() noexcept {
-				return Get<T>() | _IterateHL0<T>();
+				return Get<T>() | _IterateHL0(T());
 			}
 			//! 全てのキャッシュを無効化
 			void resetAll() noexcept {
