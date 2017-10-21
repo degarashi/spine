@@ -156,7 +156,7 @@ namespace spi {
 				const bool ret = self->_refresh(ptr->ref(_NullPtr<T>()), _NullPtr<T>());
 				// 一緒に更新された変数フラグを立てる
 				_rflag &= ~TFlag;
-				D_Assert(!(_rflag & (OrHL0<T>() & ~TFlag & ~ACFlag)), "refresh flag was not cleared correctly");
+				D_Assert(!(_rflag & (LowerMask0<T>() & ~TFlag & ~ACFlag)), "refresh flag was not cleared correctly");
 				// Accumulationクラスを継承している変数は常に更新フラグを立てておく
 				_rflag |= ACFlag;
 				// 累積カウンタをインクリメント
@@ -169,17 +169,17 @@ namespace spi {
 						);
 			}
 			//! 上位の変数が使用する下位の変数のフラグを計算 (直下のノードのみ)
-			static constexpr RFlagValue_t _IterateHL0(lubee::Types<>) noexcept { return 0; }
+			static constexpr RFlagValue_t _LowerMask0(lubee::Types<>) noexcept { return 0; }
 			template <class T0, class... TsA>
-			static constexpr RFlagValue_t _IterateHL0(lubee::Types<T0,TsA...>) noexcept {
-				return FlagMask<T0>() | _IterateHL0(lubee::Types<TsA...>());
+			static constexpr RFlagValue_t _LowerMask0(lubee::Types<T0,TsA...>) noexcept {
+				return FlagMask<T0>() | _LowerMask0(lubee::Types<TsA...>());
 			}
 
 			//! 上位の変数が使用する下位の変数のフラグを計算
-			static constexpr RFlagValue_t _IterateHL(lubee::Types<>) noexcept { return 0; }
+			static constexpr RFlagValue_t _LowerMask(lubee::Types<>) noexcept { return 0; }
 			template <class T0, class... TsA>
-			static constexpr RFlagValue_t _IterateHL(lubee::Types<T0,TsA...>) noexcept {
-				return OrHL<T0>() | _IterateHL(lubee::Types<TsA...>());
+			static constexpr RFlagValue_t _LowerMask(lubee::Types<T0,TsA...>) noexcept {
+				return OrHL<T0>() | _LowerMask(lubee::Types<TsA...>());
 			}
 
 			//! integral_constantの値がtrueなら引数テンプレートのOrLH()を返す
@@ -189,16 +189,17 @@ namespace spi {
 			static constexpr RFlagValue_t _OrLH_If(std::true_type) noexcept { return OrLH<T0>(); }
 
 			//! 下位の変数に影響される上位の変数のフラグを計算
-			template <class T, int N>
-			static constexpr RFlagValue_t __IterateLH(IConst<N>) noexcept {
-				using T0 = typename ct_base::template At<N>;
-				using T0Has = typename T0::template Has<T>;
-				return _OrLH_If<T0>(T0Has()) | __IterateLH<T>(IConst<N+1>());
+			template <class T, class T0, class... TsA>
+			static constexpr RFlagValue_t __UpperMask(lubee::Types<T0, TsA...>) noexcept {
+				using Has = typename T0::template Has<T>;
+				return _OrLH_If<T0>(Has()) | __UpperMask<T>(lubee::Types<TsA...>());
 			}
 			template <class T>
-			static constexpr RFlagValue_t __IterateLH(IConst<ct_base::size>) noexcept { return 0; }
+			static constexpr RFlagValue_t __UpperMask(lubee::Types<>) noexcept { return 0; }
 			template <class T>
-			static constexpr RFlagValue_t _IterateLH() noexcept { return __IterateLH<T>(IConst<0>()); }
+			static constexpr RFlagValue_t _UpperMask() noexcept {
+				return __UpperMask<T>(ct_base());
+			}
 
 			//! 引数の変数フラグをORで合成
 			static constexpr RFlagValue_t _FlagMaskOr(lubee::Types<>) noexcept { return 0; }
@@ -285,7 +286,7 @@ namespace spi {
 
 		public:
 			//! 変数全てを示すフラグ値
-			static constexpr RFlagValue_t All() noexcept {
+			static constexpr RFlagValue_t FlagMaskAll() noexcept {
 				return (1 << (sizeof...(Ts)+1)) -1;
 			}
 			//! 引数の変数を示すフラグ
@@ -301,23 +302,23 @@ namespace spi {
 			template <class T>
 			static constexpr RFlagValue_t OrLH() noexcept {
 				// TypeListを巡回、A::Has<T>ならOr<A>()をたす
-				return FlagMask<T>() | _IterateLH<T>();
+				return FlagMask<T>() | _UpperMask<T>();
 			}
 			//! 自分以下の階層のフラグ (High -> Low)
 			template <class T>
 			static constexpr RFlagValue_t OrHL() noexcept {
-				return FlagMask<T>() | _IterateHL(T());
+				return FlagMask<T>() | _LowerMask(T());
 			}
 			//! 自分以下の階層のフラグ (High -> Low) 直下のみ
 			template <class T>
-			static constexpr RFlagValue_t OrHL0() noexcept {
-				return FlagMask<T>() | _IterateHL0(T());
+			static constexpr RFlagValue_t LowerMask0() noexcept {
+				return FlagMask<T>() | _LowerMask0(T());
 			}
 			//! 全てのキャッシュを無効化
 			void resetAll() noexcept {
 				for(auto& a : _accum)
 					a = 0;
-				_rflag = All();
+				_rflag = FlagMaskAll();
 			}
 			constexpr static RFlagValue_t ACFlag = _CalcAcFlag(ct_base());
 
