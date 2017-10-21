@@ -156,7 +156,7 @@ namespace spi {
 				const bool ret = self->_refresh(ptr->ref(_NullPtr<T>()), _NullPtr<T>());
 				// 一緒に更新された変数フラグを立てる
 				_rflag &= ~TFlag;
-				D_Assert(!(_rflag & (LowerMask0<T>() & ~TFlag & ~ACFlag)), "refresh flag was not cleared correctly");
+				D_Assert(!(_rflag & (LowerMask0AndMe<T>() & ~TFlag & ~ACFlag)), "refresh flag was not cleared correctly");
 				// Accumulationクラスを継承している変数は常に更新フラグを立てておく
 				_rflag |= ACFlag;
 				// 累積カウンタをインクリメント
@@ -179,20 +179,20 @@ namespace spi {
 			static constexpr RFlagValue_t _LowerMask(lubee::Types<>) noexcept { return 0; }
 			template <class T0, class... TsA>
 			static constexpr RFlagValue_t _LowerMask(lubee::Types<T0,TsA...>) noexcept {
-				return OrHL<T0>() | _LowerMask(lubee::Types<TsA...>());
+				return LowerMaskAndMe<T0>() | _LowerMask(lubee::Types<TsA...>());
 			}
 
-			//! integral_constantの値がtrueなら引数テンプレートのOrLH()を返す
+			//! integral_constantの値がtrueなら引数テンプレートのUpperMaskAndMe()を返す
 			template <class T0>
-			static constexpr RFlagValue_t _OrLH_If(std::false_type) noexcept { return 0; }
+			static constexpr RFlagValue_t _UpperMaskAndMe_If(std::false_type) noexcept { return 0; }
 			template <class T0>
-			static constexpr RFlagValue_t _OrLH_If(std::true_type) noexcept { return OrLH<T0>(); }
+			static constexpr RFlagValue_t _UpperMaskAndMe_If(std::true_type) noexcept { return UpperMaskAndMe<T0>(); }
 
 			//! 下位の変数に影響される上位の変数のフラグを計算
 			template <class T, class T0, class... TsA>
 			static constexpr RFlagValue_t __UpperMask(lubee::Types<T0, TsA...>) noexcept {
 				using Has = typename T0::template Has<T>;
-				return _OrLH_If<T0>(Has()) | __UpperMask<T>(lubee::Types<TsA...>());
+				return _UpperMaskAndMe_If<T0>(Has()) | __UpperMask<T>(lubee::Types<TsA...>());
 			}
 			template <class T>
 			static constexpr RFlagValue_t __UpperMask(lubee::Types<>) noexcept { return 0; }
@@ -211,7 +211,7 @@ namespace spi {
 			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<>) noexcept { return 0; }
 			template <class T, class... TsA>
 			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<T,TsA...>) noexcept {
-				return _OrLH_If<T>(IsAcWrapper<typename T::value_t>()) | _CalcAcFlag(lubee::Types<TsA...>());
+				return _UpperMaskAndMe_If<T>(IsAcWrapper<typename T::value_t>()) | _CalcAcFlag(lubee::Types<TsA...>());
 			}
 
 			template <class... TsA>
@@ -219,7 +219,7 @@ namespace spi {
 			template <class T, class... TsA, int N>
 			void __setFlag(IConst<N>) noexcept {
 				// 自分の階層より上の変数は全てフラグを立てる
-				_rflag |= OrLH<T>();
+				_rflag |= UpperMaskAndMe<T>();
 				_rflag &= ~FlagMask<T>();
 				// Accumulationクラスを継承している変数は常に更新フラグを立てておく
 				_rflag |= ACFlag;
@@ -300,18 +300,18 @@ namespace spi {
 			}
 			//! 自分より上の階層のフラグ (Low -> High)
 			template <class T>
-			static constexpr RFlagValue_t OrLH() noexcept {
+			static constexpr RFlagValue_t UpperMaskAndMe() noexcept {
 				// TypeListを巡回、A::Has<T>ならOr<A>()をたす
 				return FlagMask<T>() | _UpperMask<T>();
 			}
 			//! 自分以下の階層のフラグ (High -> Low)
 			template <class T>
-			static constexpr RFlagValue_t OrHL() noexcept {
+			static constexpr RFlagValue_t LowerMaskAndMe() noexcept {
 				return FlagMask<T>() | _LowerMask(T());
 			}
 			//! 自分以下の階層のフラグ (High -> Low) 直下のみ
 			template <class T>
-			static constexpr RFlagValue_t LowerMask0() noexcept {
+			static constexpr RFlagValue_t LowerMask0AndMe() noexcept {
 				return FlagMask<T>() | _LowerMask0(T());
 			}
 			//! 全てのキャッシュを無効化

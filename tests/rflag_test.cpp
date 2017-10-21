@@ -164,7 +164,7 @@ namespace spi {
 			private:
 				template <class Tag>
 				void _updateSetflag() {
-					_setflag &= ~RF::template OrLH<Tag>();
+					_setflag &= ~RF::template UpperMaskAndMe<Tag>();
 					_setflag |= RF::template FlagMask<Tag>();
 					ASSERT_EQ(0, _setflag & _rflag.getFlag() & ~LowFlag & ~RF::ACFlag);
 				}
@@ -199,7 +199,7 @@ namespace spi {
 									// 下位の値から算出
 									const auto val = obj._calcValue((Tag*)nullptr);
 									// 最下位の値を除いた更新フラグの数だけカウンタがインクリメントされる(筈)
-									const RFlagValue_t flag = RF::template OrHL<Tag>() & (~LowFlag) & obj._rflag.getFlag();
+									const RFlagValue_t flag = RF::template LowerMaskAndMe<Tag>() & (~LowFlag) & obj._rflag.getFlag();
 									const int nbit = lubee::bit::Count(flag);
 									obj._counter = 0;
 									ASSERT_EQ(val, obj._rflag.template get<Tag>(&obj));
