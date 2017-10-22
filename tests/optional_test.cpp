@@ -257,7 +257,10 @@ namespace spi {
 		TYPED_TEST(Optional, Serialization) {
 			using test_t = ::spi::Optional<TypeParam>;
 			test_t opt(this->makeRV());
-			lubee::CheckSerializationWithMake([&opt](){ return new test_t(std::move(opt)); });
+
+			std::unique_ptr<test_t>	p0(new test_t(std::move(opt))),
+									p1;
+			lubee::CheckSerialization(p0, p1);
 		}
 
 		struct OptionalC : Random {};
