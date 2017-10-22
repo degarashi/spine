@@ -16,13 +16,14 @@ namespace spi {
 			using Types1 = lubee::Types<typename R::Value3>;
 			using TypesC = typename Types0::template Append<Types1>;
 
-			MT&				_mt;
+			MT*				_mt = nullptr;
 			// [Types0(Value01が他に及ぼす変数)][Types1(Value02が他に及ぼす変数)]
 			// ビットが立っている場合に更新
-			const uint32_t	_mask;
-			RFRefr(MT& mt):
+			uint32_t		_mask = 0;
+			RFRefr() = default;
+			RFRefr(MT* mt):
 				_mt(mt),
-				_mask(mt.template getUniform<uint32_t>({0, (1<<TypesC::size)-1}))
+				_mask(mt ? mt->template getUniform<uint32_t>({0, (1<<TypesC::size)-1}) : 0)
 			{}
 
 			uint32_t getTestPattern() const {
@@ -38,7 +39,7 @@ namespace spi {
 			void _rewrite(Obj& obj, IConst<N>, uint32_t mask) const {
 				using Tag = typename Types::template At<N>;
 				if(mask & 1) {
-					const auto val = _mt.template getUniform<GetRaw_t<typename Tag::value_t>>();
+					const auto val = _mt->template getUniform<GetRaw_t<typename Tag::value_t>>();
 					obj._rflag.template set<Tag>(val);
 					obj.template _updateSetflag<Tag>();
 				}
@@ -127,7 +128,7 @@ namespace spi {
 				Values			_value;
 				RFlagValue_t	_setflag;
 				mutable int		_counter;
-				MT&				_mt;
+				MT*				_mt;
 
 				template <class Tag>
 				auto _calcValue(Tag*) const {
@@ -312,7 +313,7 @@ namespace spi {
 				// Tのランダム値
 				template <class T>
 				auto _genValue() {
-					return _mt.template getUniform<GetRaw_t<T>>();
+					return _mt->template getUniform<GetRaw_t<T>>();
 				}
 
 				// キャッシュ値を全てゼロで初期化
@@ -338,14 +339,26 @@ namespace spi {
 				}
 				RFRefr<MT, RFObj>	_refr;
 
-			public:
-				RFObj(MT& mt):
-					_mt(mt),
-					_refr(mt)
-				{
+				template <class Ar, class MT2, class BaseT2, class InterT2>
+				friend void serialize(Ar& ar, RFObj<MT2,BaseT2,InterT2>& r);
+
+				void _init() {
 					_InitFunc();
 					_InitGetFunc();
 					resetAll();
+				}
+			public:
+				RFObj():
+					_mt(nullptr),
+					_refr(nullptr)
+				{
+					_init();
+				}
+				RFObj(MT* mt):
+					_mt(mt),
+					_refr(mt)
+				{
+					_init();
 				}
 
 				RFLAG_TEST_DEFINE()
@@ -366,6 +379,9 @@ namespace spi {
 					_setflag = 0;
 					_rflag.resetAll();
 					_init(IConst<0>());
+				}
+				bool operator == (const RFObj& r) const noexcept {
+					return _rflag == r._rflag;
 				}
 		};
 		template <class MT, class BaseT, class InterT>
@@ -429,10 +445,8 @@ namespace spi {
 						>;
 		TYPED_TEST_CASE(RFlag, NTypes);
 
-		TYPED_TEST(RFlag, General) {
-			USING(RF);
-			auto& mt = this->mt();
-			RF obj(mt);
+		template <class RF, class MT>
+		void Check(RF& obj, MT& mt, const bool bChk) {
 			using Cache_t = typename RF::Cache_t;
 			using Action = typename RF::Action;
 			const auto mtf = mt.template getUniformF<int>();
@@ -444,17 +458,48 @@ namespace spi {
 					const int idVal = mtf({0, Cache_t::size-1}),
 								idAct = mtf({0, Action::_Num-1});
 					const int act = (idAct << RF::ValB) | idVal;
-					ASSERT_NO_FATAL_FAILURE(RF::s_chkfunc[act](obj));
+					if(bChk)
+						ASSERT_NO_FATAL_FAILURE(RF::s_chkfunc[act](obj));
 					// 時々まとめてget関数のチェックを入れる
 					if(mtf({0, 31}) == 0) {
 						const int idget = mtf({0, Cache_t::size-1});
-						ASSERT_NO_FATAL_FAILURE(RF::s_chkgetfunc[idget](obj));
+						if(bChk)
+							ASSERT_NO_FATAL_FAILURE(RF::s_chkgetfunc[idget](obj));
 					}
 				}
 				obj.resetAll();
 			}
+		}
+		TYPED_TEST(RFlag, General) {
+			USING(RF);
+			auto& mt = this->mt();
+			RF obj(&mt);
+			Check(obj, mt, true);
+		}
 
-			lubee::CheckSerialization(obj._rflag);
+		template <class Ar, class MT2, class BaseT2, class InterT2>
+		void serialize(Ar& ar, RFObj<MT2,BaseT2,InterT2>& r) {
+			ar(r._rflag);
+		}
+		TYPED_TEST(RFlag, Serialization) {
+			USING(RF);
+			auto& mt = this->mt();
+			RF obj;
+			Check(obj, mt, false);
+
+			struct Cmp {
+				bool operator()(const RF& o0, const RF& o1) const noexcept {
+					const auto prepare = [](const RF& obj){
+						obj.getValue01();
+						obj.getValue02();
+						obj.getValue01_02_3();
+					};
+					prepare(o0);
+					prepare(o1);
+					return o0 == o1;
+				}
+			};
+			lubee::CheckSerialization(obj, Cmp());
 		}
 	}
 }
