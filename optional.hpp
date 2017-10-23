@@ -299,5 +299,14 @@ namespace spi {
 			friend void save(Ar&, const Optional<T2>&);
 	};
 	template <class T>
+	std::ostream& operator << (std::ostream& os, const Optional<T>& opt) {
+		os << "optional{";
+		if(opt)
+			os << *opt;
+		else
+			os << "none";
+		return os << "}";
+	}
+	template <class T>
 	const typename Optional<T>::_AsInitialized Optional<T>::AsInitialized{};
 }
