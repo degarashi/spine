@@ -64,6 +64,10 @@ namespace spi {
 					cs(val);
 				}
 		};
+		template <class T>
+		std::ostream& operator << (std::ostream& os, const MoveOnly<T>& m) {
+			return os << m.get();
+		}
 
 		template <class T>
 		void ModifyValue(MoveOnly<T>& t) {
