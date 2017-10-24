@@ -2,6 +2,7 @@
 #include "restag.hpp"
 #include "lubee/error.hpp"
 #include <unordered_set>
+#include <vector>
 
 namespace spi {
 	//! 名前無しリソースマネージャ
@@ -50,6 +51,10 @@ namespace spi {
 			using const_iterator = _iterator<true>;
 
 			Resource_SP		_resource;
+			using Vec = std::vector<shared_t>;
+			// シリアライズで復元した際の一時的なバックアップ
+			// (内部にweak_ptrしか持っておらず削除されてしまう為)
+			Vec				_serializeBackup;
 
 			template <class P>
 			static void _Release(const Resource_SP& r, P *const p) noexcept {
@@ -71,6 +76,12 @@ namespace spi {
 			ResMgr():
 				_resource(std::make_shared<Resource>())
 			{}
+			void cleanBackup() {
+				_serializeBackup.clear();
+			}
+			const Vec& getBackup() const {
+				return _serializeBackup;
+			}
 			iterator begin() noexcept { return _resource->set.begin(); }
 			iterator end() noexcept { return _resource->set.end(); }
 			const_iterator begin() const noexcept { return _resource->set.begin(); }

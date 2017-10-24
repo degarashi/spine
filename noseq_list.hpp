@@ -316,10 +316,16 @@ namespace spi {
 			//! 主にデバッグ用。内部状態も含めて比較
 			bool operator == (const noseq_list& lst) const {
 				D_Assert0(!_bRemoving);
+				if(_nFree != 0) {
+					if(_firstFree != lst._firstFree)
+						return false;
+				}
 				return _nFree == lst._nFree &&
-						_firstFree == lst._firstFree &&
 						_remList == lst._remList &&
 						_array == lst._array;
+			}
+			bool operator != (const noseq_list& lst) const {
+				return !(this->operator == (lst));
 			}
 	};
 }
