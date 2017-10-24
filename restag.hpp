@@ -19,8 +19,7 @@ namespace spi {
 			ptr(p)
 		{}
 		bool operator == (const ResTag& t) const noexcept {
-			// 生ポインタだけ比較(weak_ptrも中身は同じなので)
-			return ptr == t.ptr;
+			return *ptr == *t.ptr;
 		}
 		bool operator != (const ResTag& t) const noexcept {
 			return !(operator ==(t));
