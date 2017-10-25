@@ -75,7 +75,11 @@ namespace spi {
 					m.erase(itr2);
 					alc.destroy(p);
 					alc.deallocate(p, 1);
-				} catch(...) {}
+				} catch(const std::exception& e) {
+					AssertF("exception occurred (%s)", e.what());
+				} catch(...) {
+					AssertF("unknown exception occurred");
+				}
 			}
 			const static key_t s_anonymousPrefix;
 			// 無名リソースを作成する際の通し番号
