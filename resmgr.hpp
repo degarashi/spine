@@ -27,6 +27,13 @@ namespace spi {
 			using Set = std::unordered_set<tag_t>;
 			struct Resource {
 				Set			set;
+
+				bool operator == (const Resource& r) const noexcept {
+					return set == r.set;
+				}
+				bool operator != (const Resource& r) const noexcept {
+					return !(this->operator == (r));
+				}
 			};
 			using Resource_SP = std::shared_ptr<Resource>;
 
@@ -98,20 +105,7 @@ namespace spi {
 			}
 			// (主にデバッグ用)
 			bool operator == (const ResMgr& m) const noexcept {
-				auto	&s0 = _resource->set,
-						&s1 = m._resource->set;
-				if(s0.size() == s1.size()) {
-					auto itr0 = s0.begin(),
-						 itr1 = s1.begin();
-					while(itr0 != s0.end()) {
-						if(*itr0 != *itr1)
-							return false;
-						++itr0;
-						++itr1;
-					}
-					return true;
-				}
-				return false;
+				return *_resource == *m._resource;
 			}
 			bool operator != (const ResMgr& m) const noexcept {
 				return !(this->operator == (m));

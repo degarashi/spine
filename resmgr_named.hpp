@@ -28,6 +28,14 @@ namespace spi {
 			struct Resource {
 				Map			map;
 				Val2Key		v2k;
+
+				bool operator == (const Resource& r) const noexcept {
+					// v2kは比較しない
+					return map == r.map;
+				}
+				bool operator != (const Resource& r) const noexcept {
+					return !(this->operator == (r));
+				}
 			};
 			using Resource_SP = std::shared_ptr<Resource>;
 
@@ -169,20 +177,9 @@ namespace spi {
 
 			// (主にデバッグ用)
 			bool operator == (const ResMgrName& m) const noexcept {
-				auto	&m0 = _resource->map,
-						&m1 = m._resource->map;
-				if(m0.size() == m1.size()) {
-					auto itr0 = m0.begin(),
-						 itr1 = m1.begin();
-					while(itr0 != m0.end()) {
-						if(*itr0 != *itr1)
-							return false;
-						++itr0;
-						++itr1;
-					}
-					return _acounter == m._acounter;
-				}
-				return false;
+				if(*_resource != *m._resource)
+					return false;
+				return _acounter == m._acounter;
 			}
 			bool operator != (const ResMgrName& m) const noexcept {
 				return !(this->operator == (m));
