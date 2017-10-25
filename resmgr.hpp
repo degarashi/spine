@@ -73,9 +73,13 @@ namespace spi {
 				}
 			}
 		public:
-			ResMgr():
-				_resource(std::make_shared<Resource>())
-			{}
+			ResMgr() {
+				clear();
+			}
+			void clear() {
+				cleanBackup();
+				_resource = std::make_shared<Resource>();
+			}
 			void cleanBackup() {
 				_serializeBackup.clear();
 			}
