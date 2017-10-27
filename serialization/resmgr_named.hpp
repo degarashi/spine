@@ -6,6 +6,7 @@
 namespace spi {
 	template <class Ar, class T, class K>
 	void save(Ar& ar, const ResMgrName<T,K>& mgr) {
+		D_Assert0(mgr._serializeBackup.empty());
 		using Mgr = std::decay_t<decltype(mgr)>;
 		using NVPair = std::vector<std::pair<typename Mgr::key_t, typename Mgr::shared_t>>;
 		// 一旦shared_ptrに変換
@@ -31,5 +32,12 @@ namespace spi {
 			v2k[n.second.get()] = n.first;
 		}
 		ar(mgr._acounter);
+
+		const int n = nv.size();
+		auto& bkup = mgr._serializeBackup;
+		bkup.resize(n);
+		for(int i=0 ; i<n ; i++) {
+			bkup[i] = nv[i].second;
+		}
 	}
 }
