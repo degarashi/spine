@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <algorithm>
 
 namespace spi {
 	template <class T>
@@ -18,13 +19,48 @@ namespace spi {
 		ResTag(const value_t* p):
 			ptr(p)
 		{}
-		bool operator == (const ResTag& t) const noexcept {
+		bool deepCmp(const ResTag& t) const noexcept {
 			return *ptr == *t.ptr;
+		}
+		// ResTagをunordered_setに登録するだけなのでポインタ値を比較
+		bool operator == (const ResTag& t) const noexcept {
+			return ptr == t.ptr;
 		}
 		bool operator != (const ResTag& t) const noexcept {
 			return !(operator ==(t));
 		}
 	};
+	template <class S>
+	bool SetDeepCompare(const S& a, const S& b) noexcept {
+		if(a.size() != b.size())
+			return false;
+		const auto itrB0 = b.begin(),
+					 itrB1 = b.end();
+		for(auto& ap : a) {
+			if(std::find_if(itrB0, itrB1, [&ap](const auto& b){
+					return ap.deepCmp(b);
+				}) == b.end())
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+	template <class M>
+	bool MapDeepCompare(const M& a, const M& b) noexcept {
+		if(a.size() != b.size())
+			return false;
+		const auto itrB0 = b.begin(),
+					 itrB1 = b.end();
+		for(auto& ap : a) {
+			const auto itr = b.find(ap.first);
+			if(itr == b.end())
+				return false;
+			if(ap.second != itr->second)
+				return false;
+		}
+		return true;
+	}
 }
 namespace std {
 	template <class T>

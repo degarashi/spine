@@ -29,12 +29,9 @@ namespace spi {
 				Map			map;
 				Val2Key		v2k;
 
-				bool operator == (const Resource& r) const noexcept {
+				bool deepCmp(const Resource& r) const noexcept {
 					// v2kは比較しない
-					return map == r.map;
-				}
-				bool operator != (const Resource& r) const noexcept {
-					return !(this->operator == (r));
+					return MapDeepCompare(map, r.map);
 				}
 			};
 			using Resource_SP = std::shared_ptr<Resource>;
@@ -179,14 +176,10 @@ namespace spi {
 			const_iterator end() const noexcept { return _resource->map.end(); }
 			const_iterator cend() const noexcept { return _resource->map.cend(); }
 
-			// (主にデバッグ用)
-			bool operator == (const ResMgrName& m) const noexcept {
-				if(*_resource != *m._resource)
+			bool deepCmp(const ResMgrName& m) const noexcept {
+				if(!_resource->deepCmp(*m._resource))
 					return false;
 				return _acounter == m._acounter;
-			}
-			bool operator != (const ResMgrName& m) const noexcept {
-				return !(this->operator == (m));
 			}
 			template <class T2>
 			struct Constructor {

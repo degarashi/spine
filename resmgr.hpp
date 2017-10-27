@@ -28,11 +28,8 @@ namespace spi {
 			struct Resource {
 				Set			set;
 
-				bool operator == (const Resource& r) const noexcept {
-					return set == r.set;
-				}
-				bool operator != (const Resource& r) const noexcept {
-					return !(this->operator == (r));
+				bool deepCmp(const Resource& r) const noexcept {
+					return SetDeepCompare(set, r.set);
 				}
 			};
 			using Resource_SP = std::shared_ptr<Resource>;
@@ -103,12 +100,8 @@ namespace spi {
 			const Resource_SP& getResourceSet() noexcept {
 				return _resource;
 			}
-			// (主にデバッグ用)
-			bool operator == (const ResMgr& m) const noexcept {
-				return *_resource == *m._resource;
-			}
-			bool operator != (const ResMgr& m) const noexcept {
-				return !(this->operator == (m));
+			bool deepCmp(const ResMgr& m) const noexcept {
+				return _resource->deepCmp(*m._resource);
 			}
 			template <class T2=value_t, class... Ts>
 			auto emplace(Ts&&... ts) {
