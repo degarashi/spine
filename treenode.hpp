@@ -212,7 +212,11 @@ namespace spi {
 					_spChild->removeSibling(nullptr, target);
 				}
 			}
+#ifdef DEBUG
 			void removeSibling(pointer prev, const SP& target) {
+#else
+			void removeSibling(pointer /*prev*/, const SP& target) {
+#endif
 				if(target.get() == this) {
 					if(auto sp = getParent())
 						T::OnChildRemove(sp.get(), this->shared_from_this());
