@@ -50,8 +50,6 @@ namespace spi {
 	bool MapDeepCompare(const M& a, const M& b) noexcept {
 		if(a.size() != b.size())
 			return false;
-		const auto itrB0 = b.begin(),
-					 itrB1 = b.end();
 		for(auto& ap : a) {
 			const auto itr = b.find(ap.first);
 			if(itr == b.end())
