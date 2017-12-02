@@ -124,6 +124,8 @@ namespace spi {
 	template <class T>
 	class Optional {
 		private:
+			template <class T2>
+			friend class Optional;
 			using value_t = T;
 			constexpr static bool Is_RP = IsRP<T>{};
 			using Buffer = opt_tmp::Buffer<T>;
@@ -223,10 +225,10 @@ namespace spi {
 			explicit operator bool () const noexcept {
 				return _bInit;
 			}
-			decltype(auto) operator -> () noexcept {
+			auto operator -> () noexcept -> decltype(_buffer.ptr()) {
 				return _buffer.ptr();
 			}
-			decltype(auto) operator -> () const noexcept {
+			auto operator -> () const noexcept -> decltype(_buffer.ptr()) {
 				return _buffer.ptr();
 			}
 			bool operator == (const Optional& t) const noexcept {
