@@ -5,6 +5,36 @@
 #include <unordered_map>
 
 namespace spi {
+	inline const char* GetAnonymousStr(std::string*) { return u8"_a_"; }
+	inline const char16_t* GetAnonymousStr(std::u16string*) { return u"_a_"; }
+	inline const char32_t* GetAnonymousStr(std::u32string*) { return U"_a_"; }
+	template <class Char, class Traits, class Alloc>
+	auto MakeAnonymous(std::basic_string<Char, Traits, Alloc>*, const uint64_t num) ->
+		std::basic_string<Char, Traits, Alloc>
+	{
+		using key_t = std::basic_string<Char, Traits, Alloc>;
+		key_t ret(GetAnonymousStr((key_t*)nullptr));
+		ret.append(std::to_string(num));
+		return ret;
+	}
+	template <class Char, class Traits, class Alloc>
+	bool IsAnonymous(const std::basic_string<Char, Traits, Alloc>& key) {
+		using Key = std::decay_t<decltype(key)>;
+		const static Key c_prefix(GetAnonymousStr((Key*)nullptr));
+		const auto plen = c_prefix.size();
+		if(key.size() >= plen) {
+			auto itr0 = key.cbegin(),
+				 itr1 = c_prefix.cbegin();
+			do {
+				if(*itr0 != *itr1)
+					return false;
+				++itr0;
+				++itr1;
+			} while(itr1 != c_prefix.cend());
+			return true;
+		}
+		return false;
+	}
 	//! 名前付きリソースマネージャ
 	/*!
 		中身の保持はすべてスマートポインタで行う
@@ -82,14 +112,12 @@ namespace spi {
 					AssertF("unknown exception occurred");
 				}
 			}
-			const static key_t s_anonymousPrefix;
 			// 無名リソースを作成する際の通し番号
 			uint64_t _acounter;
 			key_t _makeAKey() {
 				// 適当にリソース名を生成して、ダブりがなければOK
 				for(;;) {
-					key_t key(s_anonymousPrefix);
-					key += std::to_string(_acounter++);
+					const key_t key = MakeAnonymous((key_t*)nullptr, _acounter++);
 					if(_resource->map.count(key) == 0)
 						return key;
 				}
@@ -101,24 +129,12 @@ namespace spi {
 			friend void load(Ar&, ResMgrName<T2,K2>&);
 
 			key_t _convertKey(const key_t& s) {
-				key_t tk(s);
-				if(!_HasAnonymousPrefix(tk))
+				if(!IsAnonymous(s)) {
+					key_t tk(s);
 					_modifyResourceName(tk);
-				return tk;
-			}
-			static bool _HasAnonymousPrefix(const key_t& s) {
-				if(s.size() >= s_anonymousPrefix.size()) {
-					auto itr0 = s.cbegin(),
-						 itr1 = s_anonymousPrefix.cbegin();
-					do {
-						if(*itr0 != *itr1)
-							return false;
-						++itr0;
-						++itr1;
-					} while(itr1 != s_anonymousPrefix.cend());
-					return true;
+					return tk;
 				}
-				return false;
+				return s;
 			}
 			template <class T2>
 			auto _getDeleter() {
@@ -315,11 +331,4 @@ namespace spi {
 				return _resource->map.size();
 			}
 	};
-	template <class T>
-	const char* GetAnonymousPrefix(T*) { return u8"__anonymous__"; }
-	inline const char16_t* GetAnonymousPrefix(std::u16string*) { return  u"__anonymous__"; }
-	inline const char32_t* GetAnonymousPrefix(std::u32string*) { return  U"__anonymous__"; }
-
-	template <class T, class K, class A>
-	const typename ResMgrName<T,K,A>::key_t ResMgrName<T,K,A>::s_anonymousPrefix(GetAnonymousPrefix((K*)nullptr));
 }
