@@ -188,6 +188,7 @@ namespace spi {
 			ResMgrName() {
 				clear();
 			}
+			virtual ~ResMgrName() {}
 			void clear() {
 				cleanBackup();
 				_resource = std::make_shared<Resource>();
