@@ -49,6 +49,7 @@ namespace spi {
 		public:
 			using value_t = T;
 			using shared_t = std::shared_ptr<value_t>;
+			using const_shared_t = std::shared_ptr<const value_t>;
 			using key_t = K;
 		private:
 			using this_t = ResMgrName<T,K>;
@@ -303,7 +304,7 @@ namespace spi {
 			}
 
 			//! リソースに対応するキーを取得(from shared_ptr)
-			Optional<const key_t&> getKey(const shared_t& p) const {
+			Optional<const key_t&> getKey(const const_shared_t& p) const {
 				return getKey(p.get());
 			}
 			//! リソースに対応するキーを取得(from pointer)
@@ -315,17 +316,24 @@ namespace spi {
 					return itr->second;
 				return none;
 			}
-			//! キーに対応するリソースを取り出す(ない場合はnullptrを返す)
-			shared_t get(const key_t& k) {
+			template <class Ret>
+			Ret _get(const key_t& k) {
 				const key_t tk = _convertKey(k);
 				auto& map = _resource->map;
 				const auto itr = map.find(tk);
 				if(itr != map.end()) {
-					shared_t ret(itr->second.weak.lock());
+					Ret ret(itr->second.weak.lock());
 					D_Assert0(ret);
 					return ret;
 				}
 				return nullptr;
+			}
+			//! キーに対応するリソースを取り出す(ない場合はnullptrを返す)
+			shared_t get(const key_t& k) {
+				return _get<shared_t>(k);
+			}
+			const_shared_t get(const key_t& k) const {
+				return const_cast<this_t&>(*this).template _get<const_shared_t>(k);
 			}
 			//! 確保されたリソース数
 			std::size_t size() const noexcept {
