@@ -3,9 +3,18 @@
 #include <type_traits>
 
 // 内部使用
-#define DefineEnum_Postfix(name, seq) \
+#define DefineEnumStr_func2(r, data, elem) BOOST_PP_STRINGIZE(elem),
+#define DefineEnumStr_func(seq) \
+		static const char* ToStr(const int v) { \
+			static const char* str[_Num] = { \
+				BOOST_PP_SEQ_FOR_EACH(DefineEnumStr_func2, 0, seq) \
+			}; \
+			return str[v]; \
+		}
+#define DefineEnum_Postfix(name, seq, func) \
 			_Num = BOOST_PP_SEQ_SIZE(seq) \
 		} value; \
+		func(seq) \
 		name() = default; \
 		name(const name&) = default; \
 		name(const e& n): value(n) {} \
@@ -28,6 +37,7 @@
 			CCC,
 			_Num = 3
 		} value;
+		static const char* ToStr(const int v);
 	};
 	のような形で定義される
 */
@@ -35,10 +45,23 @@
 	struct name { \
 		enum e { \
 			BOOST_PP_SEQ_ENUM(seq), \
-			DefineEnum_Postfix(name,seq)
+			DefineEnum_Postfix(name,seq, DefineEnumStr_func)
 
 // 内部使用
 #define DefineEnumPair_func(r, data, elem) BOOST_PP_SEQ_ELEM(0,elem)=BOOST_PP_SEQ_ELEM(1,elem),
+#define DefineEnumStrPair_func2(r, data, elem) {BOOST_PP_SEQ_ELEM(0,elem), BOOST_PP_STRINGIZE(BOOST_PP_SEQ_ELEM(1,elem))},
+#define DefineEnumStrPair_func(seq) \
+		static const char* ToStr(const int v) { \
+			static std::pair<int, const char*> str[_Num] = { \
+				BOOST_PP_SEQ_FOR_EACH(DefineEnumStrPair_func2, 0, seq) \
+			}; \
+			for(int i=0 ; i<_Num ; i++) { \
+				if(str[i].first == v) \
+					return str[i].second; \
+			} \
+			return nullptr; \
+		}
+
 //! 値を明示的に指定するEnum定義
 /*!
 	DefineEnumPair(
@@ -55,6 +78,7 @@
 			CCC = 300,
 			_Num = 3
 		} value;
+		static const char* ToStr(const int v);
 	};
 	のような形で定義される
 */
@@ -62,4 +86,4 @@
 	struct name { \
 		enum e { \
 			BOOST_PP_SEQ_FOR_EACH(DefineEnumPair_func, 0, seq) \
-			DefineEnum_Postfix(name, seq)
+			DefineEnum_Postfix(name, seq, DefineEnumStrPair_func)
