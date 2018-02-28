@@ -5,7 +5,7 @@
 // 内部使用
 #define DefineEnumStr_func2(r, data, elem) BOOST_PP_STRINGIZE(elem),
 #define DefineEnumStr_func(seq) \
-		static const char* ToStr(const int v) { \
+		static const char* ToStr(const int v) noexcept { \
 			static const char* str[_Num] = { \
 				BOOST_PP_SEQ_FOR_EACH(DefineEnumStr_func2, 0, seq) \
 			}; \
@@ -24,6 +24,7 @@
 		serialize_t save_minimal(const Ar&) const noexcept { return value; } \
 		template <class Ar> \
 		void load_minimal(const Ar&, const serialize_t& v) noexcept { value=static_cast<e>(v); } \
+		const char* toStr() const noexcept { return ToStr(value); } \
 	}
 
 //! Enum定義
