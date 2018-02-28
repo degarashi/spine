@@ -1,13 +1,7 @@
 #pragma once
 #include <boost/preprocessor.hpp>
-#include <type_traits>
+#include "enum_t.hpp"
 
-namespace spi {
-	namespace inner {
-		enum EnumTmp {};
-	}
-	using Enum_t = std::underlying_type_t<inner::EnumTmp>;
-}
 // 内部使用
 #define DefineEnumStr_func2(r, data, elem) BOOST_PP_STRINGIZE(elem),
 #define DefineEnumStr_func(seq) \
