@@ -2,10 +2,16 @@
 #include <boost/preprocessor.hpp>
 #include <type_traits>
 
+namespace spi {
+	namespace inner {
+		enum EnumTmp {};
+	}
+	using Enum_t = std::underlying_type_t<inner::EnumTmp>;
+}
 // 内部使用
 #define DefineEnumStr_func2(r, data, elem) BOOST_PP_STRINGIZE(elem),
 #define DefineEnumStr_func(seq) \
-		static const char* ToStr(const int v) noexcept { \
+		static const char* ToStr(const ::spi::Enum_t v) noexcept { \
 			static const char* str[_Num] = { \
 				BOOST_PP_SEQ_FOR_EACH(DefineEnumStr_func2, 0, seq) \
 			}; \
@@ -38,7 +44,7 @@
 			CCC,
 			_Num = 3
 		} value;
-		static const char* ToStr(const int v);
+		static const char* ToStr(const Enum_t v);
 	};
 	のような形で定義される
 */
@@ -52,11 +58,11 @@
 #define DefineEnumPair_func(r, data, elem) BOOST_PP_SEQ_ELEM(0,elem)=BOOST_PP_SEQ_ELEM(1,elem),
 #define DefineEnumStrPair_func2(r, data, elem) {BOOST_PP_SEQ_ELEM(0,elem), BOOST_PP_STRINGIZE(BOOST_PP_SEQ_ELEM(1,elem))},
 #define DefineEnumStrPair_func(seq) \
-		static const char* ToStr(const int v) { \
-			static std::pair<int, const char*> str[_Num] = { \
+		static const char* ToStr(const ::spi::Enum_t v) { \
+			static std::pair<::spi::Enum_t, const char*> str[_Num] = { \
 				BOOST_PP_SEQ_FOR_EACH(DefineEnumStrPair_func2, 0, seq) \
 			}; \
-			for(int i=0 ; i<_Num ; i++) { \
+			for(::spi::Enum_t i=0 ; i<_Num ; i++) { \
 				if(str[i].first == v) \
 					return str[i].second; \
 			} \
@@ -79,7 +85,7 @@
 			CCC = 300,
 			_Num = 3
 		} value;
-		static const char* ToStr(const int v);
+		static const char* ToStr(const Enum_t v);
 	};
 	のような形で定義される
 */
