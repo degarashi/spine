@@ -50,7 +50,7 @@
 
 // 内部使用
 #define DefineEnumPair_func(r, data, elem) BOOST_PP_SEQ_ELEM(0,elem)=BOOST_PP_SEQ_ELEM(1,elem),
-#define DefineEnumStrPair_func2(r, data, elem) {BOOST_PP_SEQ_ELEM(0,elem), BOOST_PP_STRINGIZE(BOOST_PP_SEQ_ELEM(1,elem))},
+#define DefineEnumStrPair_func2(r, data, elem) {BOOST_PP_SEQ_ELEM(0,elem), BOOST_PP_STRINGIZE(BOOST_PP_SEQ_ELEM(0,elem))},
 #define DefineEnumStrPair_func(seq) \
 		static const char* ToStr(const ::spi::Enum_t v) { \
 			static std::pair<::spi::Enum_t, const char*> str[_Num] = { \
