@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 namespace spi {
+	#define RESMGRNAME_DEFINED
 	inline const char* GetAnonymousStr(std::string*) { return u8"_a_"; }
 	inline const char16_t* GetAnonymousStr(std::u16string*) { return u"_a_"; }
 	inline const char32_t* GetAnonymousStr(std::u32string*) { return U"_a_"; }
