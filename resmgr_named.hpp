@@ -169,7 +169,7 @@ namespace spi {
 				_resource->v2k.emplace(tag.ptr, k_to);
 			}
 			template <class T2, class Make>
-			auto _addEntry(const key_t& k, const Make& make) {
+			auto _addEntry(const key_t& k, const Make& make) -> std::shared_ptr<T2> {
 				// 新しくリソースを作成
 				Constructor<T2> ctor;
 				make(k, ctor);
@@ -231,7 +231,7 @@ namespace spi {
 
 			// ---- 名前付きリソース作成 ----
 			template <class T2, class Make>
-			auto acquireWithMake(const key_t& k, Make&& make) {
+			auto acquireWithMake(const key_t& k, Make&& make) -> std::pair<std::shared_ptr<T2>, bool> {
 				const key_t tk = _convertKey(k);
 				// 既に同じ名前でリソースを確保済みならばそれを返す
 				if(auto ret = get(tk))
@@ -240,13 +240,13 @@ namespace spi {
 			}
 			//! 型を指定してのリソース確保
 			template <class T2, class... Ts>
-			auto emplaceWithType(const key_t& k, Ts&&... ts) {
+			auto emplaceWithType(const key_t& k, Ts&&... ts) -> std::pair<std::shared_ptr<T2>, bool> {
 				return acquireWithMake<T2>(k, [&ts...](auto& /*key*/, auto&& mk){
 					mk(std::forward<Ts>(ts)...);
 				});
 			}
 			template <class... Ts>
-			auto emplace(const key_t& k, Ts&&... ts) {
+			auto emplace(const key_t& k, Ts&&... ts) -> std::pair<std::shared_ptr<value_t>, bool> {
 				return emplaceWithType<value_t>(k, std::forward<Ts>(ts)...);
 			}
 			bool setAnonymous(const key_t& k, key_t* oldKey=nullptr) {
@@ -285,7 +285,7 @@ namespace spi {
 
 			// ---- 無名リソース作成 ----
 			template <class P, class... Ts>
-			auto acquireA(Ts&&... ts) {
+			auto acquireA(Ts&&... ts) -> std::shared_ptr<P> {
 				const auto key = _makeAKey();
 				auto ret = acquireWithMake<P>(key,
 							[&ts...](auto& /*key*/, auto&& mk){
@@ -296,12 +296,12 @@ namespace spi {
 			}
 			//! データ型を指定しての無名リソース確保
 			template <class T2, class... Ts>
-			auto emplaceA_WithType(Ts&&... ts) {
+			auto emplaceA_WithType(Ts&&... ts) -> std::shared_ptr<T2> {
 				return acquireA<T2>(std::forward<Ts>(ts)...);
 			}
 			//! 無名リソース確保(データ型 = value_t>
 			template <class... Ts>
-			auto emplaceA(Ts&&... ts) {
+			auto emplaceA(Ts&&... ts) -> std::shared_ptr<value_t> {
 				return emplaceA_WithType<value_t>(std::forward<Ts>(ts)...);
 			}
 
