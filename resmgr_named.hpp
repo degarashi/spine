@@ -3,6 +3,7 @@
 #include "restag.hpp"
 #include "optional.hpp"
 #include <unordered_map>
+#include <vector>
 
 namespace spi {
 	#define RESMGRNAME_DEFINED
