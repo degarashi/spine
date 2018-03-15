@@ -104,7 +104,7 @@ namespace spi {
 				return _resource->deepCmp(*m._resource);
 			}
 			template <class T2=value_t, class... Ts>
-			auto emplace(Ts&&... ts) {
+			auto emplace(Ts&&... ts) -> std::shared_ptr<T2> {
 				typename Allocator::template rebind<T2>::other alc;
 				T2 *const ptr = alc.allocate(1);
 				alc.construct(ptr, std::forward<Ts>(ts)...);
