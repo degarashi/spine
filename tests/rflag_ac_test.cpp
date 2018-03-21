@@ -6,7 +6,7 @@
 namespace spi {
 	namespace test {
 		template <class T>
-		using GetRaw_t = std::decay_t<decltype(AcWrapperValue(std::declval<T>()))>;
+		using GetRaw_t = std::decay_t<decltype(detail::GetAcWrapperValue(std::declval<T>()))>;
 
 		#define countof(a)	(sizeof((a))/sizeof((a)[0]))
 		template <class MT>

@@ -8,90 +8,10 @@
 #include "lubee/error.hpp"
 
 namespace spi {
-	//! 累積カウンタの比較用
-	template <class T>
-	bool CompareAndSet(T& num, const T& target) {
-		if(num != target) {
-			num = target;
-			return true;
-		}
-		return false;
-	}
 	//! 更新フラグ群を格納する数値型
 	using RFlagValue_t = uint_fast32_t;
 	//! 各々の値が変更される毎にインクリメントされる値
 	using AcCounter_t = uint_fast32_t;
-	//! 変数が更新された時の累積カウンタの値を後で比較するためのラッパークラス
-	/*!
-		\tparam	CacheVal	内部キャッシュ値
-		\tparam	Getter		累積カウンタを取得するための関数クラス
-		\tparam	Ts			依存キャッシュ値
-	*/
-	template <class CacheVal, class Getter, class... Ts>
-	class AcWrapper : public CacheVal {
-		public:
-			using CacheVal_t = CacheVal;
-			using Depend_t = lubee::Types<Ts...>;
-			using Getter_t = Getter;
-			using Counter_t = typename Getter::counter_t;
-			using value_t = typename CacheVal_t::value_t;
-		private:
-			mutable AcCounter_t ac_counter[sizeof...(Ts)];
-			mutable Counter_t user_counter[sizeof...(Ts)];
-
-			template <class Ar, class C, class G, class... T>
-			friend void serialize(Ar&, AcWrapper<C,G,T...>&);
-		public:
-			template <class... Args>
-			explicit AcWrapper(Args&&... args):
-				CacheVal_t(std::forward<Args>(args)...)
-			{
-				for(auto& a : ac_counter)
-					a = ~0;
-				for(auto& a : user_counter)
-					a = ~0;
-			}
-			template <
-				class T,
-				ENABLE_IF((std::is_assignable<CacheVal_t, T>{}))
-			>
-			AcWrapper& operator = (T&& t) {
-				static_cast<CacheVal_t&>(*this) = std::forward<T>(t);
-				return *this;
-			}
-			bool operator == (const AcWrapper& w) const noexcept {
-				return static_cast<const CacheVal_t&>(*this) ==
-						static_cast<const CacheVal_t&>(w);
-			}
-			bool operator != (const AcWrapper& w) const noexcept {
-				return !(this->operator == (w));
-			}
-			template <class Type>
-			AcCounter_t& refAc() const {
-				return ac_counter[Depend_t::template Find<Type>];
-			}
-			template <class Type>
-			Counter_t& refUserAc() const {
-				return user_counter[Depend_t::template Find<Type>];
-			}
-	};
-	//! TがAcWrapperテンプレートクラスかをチェック
-	template <class T>
-	struct IsAcWrapper : std::false_type {};
-	template <class... Ts>
-	struct IsAcWrapper<AcWrapper<Ts...>> : std::true_type {};
-	template <class T>
-	inline decltype(auto) AcWrapperValue(const T& v, std::true_type) noexcept {
-		return lubee::wrapper_value(static_cast<const typename T::CacheVal_t&>(v));
-	}
-	template <class T>
-	inline decltype(auto) AcWrapperValue(const T& v, std::false_type) noexcept {
-		return v;
-	}
-	template <class T>
-	inline decltype(auto) AcWrapperValue(const T& v) noexcept {
-		return AcWrapperValue(v, IsAcWrapper<T>());
-	}
 
 	//! 毎フレームの更新チェックが必要な際に使うキャッシュ変数ラッパー
 	/*!
@@ -100,11 +20,91 @@ namespace spi {
 	*/
 	template <class CacheVal, class Getter>
 	struct AcCheck {};
-	// AcCheckを継承していればAcWrapperを、そうでなければTを返す
-	template <class... Ts, class CacheVal, class Getter>
-	AcWrapper<CacheVal, Getter, Ts...> AcDetect(AcCheck<CacheVal, Getter>*);
-	template <class... Ts, class T>
-	T AcDetect(T*);
+
+	namespace detail {
+		//! 累積カウンタの比較用
+		template <class T>
+		bool CompareAndSet(T& num, const T& target) {
+			if(num != target) {
+				num = target;
+				return true;
+			}
+			return false;
+		}
+		//! 変数が更新された時の累積カウンタの値を後で比較するためのラッパークラス
+		/*!
+			\tparam	CacheVal	内部キャッシュ値
+			\tparam	Getter		累積カウンタを取得するための関数クラス
+			\tparam	Ts			依存キャッシュ値
+		*/
+		template <class CacheVal, class Getter, class... Ts>
+		class AcWrapper : public CacheVal {
+			public:
+				using CacheVal_t = CacheVal;
+				using Depend_t = lubee::Types<Ts...>;
+				using Getter_t = Getter;
+				using Counter_t = typename Getter::counter_t;
+				using value_t = typename CacheVal_t::value_t;
+			private:
+				mutable AcCounter_t ac_counter[sizeof...(Ts)];
+				mutable Counter_t user_counter[sizeof...(Ts)];
+
+				template <class Ar, class C, class G, class... T>
+				friend void serialize(Ar&, AcWrapper<C,G,T...>&);
+			public:
+				template <class... Args>
+				explicit AcWrapper(Args&&... args):
+					CacheVal_t(std::forward<Args>(args)...)
+				{
+					for(auto& a : ac_counter)
+						a = ~0;
+					for(auto& a : user_counter)
+						a = ~0;
+				}
+				template <
+					class T,
+					ENABLE_IF((std::is_assignable<CacheVal_t, T>{}))
+				>
+				AcWrapper& operator = (T&& t) {
+					static_cast<CacheVal_t&>(*this) = std::forward<T>(t);
+					return *this;
+				}
+				bool operator == (const AcWrapper& w) const noexcept {
+					return static_cast<const CacheVal_t&>(*this) ==
+							static_cast<const CacheVal_t&>(w);
+				}
+				bool operator != (const AcWrapper& w) const noexcept {
+					return !(this->operator == (w));
+				}
+				template <class Type>
+				AcCounter_t& refAc() const {
+					return ac_counter[Depend_t::template Find<Type>];
+				}
+				template <class Type>
+				Counter_t& refUserAc() const {
+					return user_counter[Depend_t::template Find<Type>];
+				}
+		};
+		//! TがAcWrapperテンプレートクラスかをチェック
+		template <class T>
+		struct IsAcWrapper : std::false_type {};
+		template <class... Ts>
+		struct IsAcWrapper<AcWrapper<Ts...>> : std::true_type {};
+		//! TがAcWrapperならばその内部値を返す
+		template <class T>
+		inline decltype(auto) GetAcWrapperValue(const T& v) noexcept {
+			if constexpr (IsAcWrapper<T>{}) {
+				return lubee::wrapper_value(static_cast<const typename T::CacheVal_t&>(v));
+			} else {
+				return v;
+			}
+		}
+		// TがAcCheckを継承していればAcWrapperを、そうでなければTを返す
+		template <class... Depend, class CacheVal, class Getter>
+		AcWrapper<CacheVal, Getter, Depend...> Convert_AcCheck(AcCheck<CacheVal, Getter>*);
+		template <class... , class T>
+		T Convert_AcCheck(T*);
+	}
 
 	//! キャッシュ変数の自動管理クラス
 	template <class Class, class... Ts>
@@ -213,7 +213,7 @@ namespace spi {
 			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<>) noexcept { return 0; }
 			template <class T, class... TsA>
 			constexpr static RFlagValue_t _CalcAcFlag(lubee::Types<T,TsA...>) noexcept {
-				return _UpperMaskAndMe_If<T>(IsAcWrapper<typename T::value_t>()) | _CalcAcFlag(lubee::Types<TsA...>());
+				return _UpperMaskAndMe_If<T>(detail::IsAcWrapper<typename T::value_t>()) | _CalcAcFlag(lubee::Types<TsA...>());
 			}
 
 			// シリアライズ用。最下層のレイヤーのみを巡回
@@ -260,18 +260,6 @@ namespace spi {
 				return ret.second | _getAsTuple<N+1>(self, dst, remain...);
 			}
 
-			template <class T, class Acc>
-			RFlagValue_t _getIfFlagDifferent(Acc&, cref_type<T>, const Class*, std::false_type) const { return 0; }
-			template <class T, class Acc>
-			RFlagValue_t _getIfFlagDifferent(Acc& acc, cref_type<T> v, const Class* self, std::true_type) const {
-				using C = typename Acc::Counter_t;
-				using G = typename Acc::Getter_t;
-				// ユーザー定義の累積カウンタ、システム定義(RFlag)の累積カウンタの何れかが異なっていたらキャッシュフラグを返す
-				if(CompareAndSet<C>(acc.template refUserAc<T>(), G()(v, _NullPtr<T>(), *self)) |
-					CompareAndSet(acc.template refAc<T>(), getAcCounter<T>()))
-					return FlagMask<T>();
-				return 0;
-			}
 			template <int N, class Acc, class Tup>
 			RFlagValue_t _getWithCheck(const Class*, const Acc&, const Tup&) const { return 0; }
 			template <int N, class Acc, class Tup, class T, class... TsA>
@@ -280,7 +268,14 @@ namespace spi {
 				// キャッシュ値のポインタはdstへ
 				std::get<N>(dst) = &ret.first;
 				// refreshがかかるか、累積カウンタが異なっていればキャッシュ値のフラグを返す
-				ret.second |= _getIfFlagDifferent<T>(acc, ret.first, self, typename Acc::Depend_t::template Has<T>());
+				if constexpr (typename Acc::Depend_t::template Has<T>{}) {
+					using C = typename Acc::Counter_t;
+					using G = typename Acc::Getter_t;
+					// ユーザー定義の累積カウンタ、システム定義(RFlag)の累積カウンタの何れかが異なっていたらキャッシュフラグを返す
+					if(detail::CompareAndSet<C>(acc.template refUserAc<T>(), G()(ret.first, _NullPtr<T>(), *self)) |
+						detail::CompareAndSet(acc.template refAc<T>(), getAcCounter<T>()))
+						ret.second |= FlagMask<T>();
+				}
 				return ret.second | _getWithCheck<N+1>(self, acc, dst, remain...);
 			}
 			template <class Acc, class... TsA>
@@ -448,7 +443,7 @@ namespace spi {
 	// キャッシュ変数タグ定義
 	#define RFLAG_CACHEDVALUE_BASE(name, valueT, ...) \
 		struct name : ::lubee::Types<__VA_ARGS__> { \
-			using value_t = decltype(::spi::AcDetect<__VA_ARGS__>((valueT*)nullptr)); };
+			using value_t = decltype(::spi::detail::Convert_AcCheck<__VA_ARGS__>((valueT*)nullptr)); };
 	// 中間refresh関数 -> 宣言のみ
 	#define RFLAG_CACHEDVALUE_MIDDLE(name, valueT, ...) \
 		bool _refresh(typename name::value_t&, name*) const;
