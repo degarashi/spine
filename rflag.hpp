@@ -94,7 +94,7 @@ namespace spi {
 		template <class T>
 		inline decltype(auto) GetAcWrapperValue(const T& v) noexcept {
 			if constexpr (IsAcWrapper<T>{}) {
-				return lubee::wrapper_value(static_cast<const typename T::CacheVal_t&>(v));
+				return lubee::UnwrapValue(static_cast<const typename T::CacheVal_t&>(v));
 			} else {
 				return v;
 			}
