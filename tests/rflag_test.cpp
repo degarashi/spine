@@ -47,7 +47,6 @@ namespace spi {
 			}
 			template <class Dst, class T>
 			void value01(Dst& dst, T& obj) const {
-				using lubee::wrapper_value;
 				dst = detail::GetAcWrapperValue(obj.getValue0()) + detail::GetAcWrapperValue(obj.getValue1());
 				// Value02に関わるキャッシュ変数をmaskに従って書き換え
 				_rewrite<Types0>(obj, IConst<0>(), _mask&((1<<Types0::size)-1));
