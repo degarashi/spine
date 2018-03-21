@@ -90,20 +90,20 @@ namespace spi {
 		struct IsAcWrapper : std::false_type {};
 		template <class... Ts>
 		struct IsAcWrapper<AcWrapper<Ts...>> : std::true_type {};
-		//! TがAcWrapperならばその内部値を返す
-		template <class T>
-		inline decltype(auto) GetAcWrapperValue(const T& v) noexcept {
-			if constexpr (IsAcWrapper<T>{}) {
-				return lubee::UnwrapValue(static_cast<const typename T::CacheVal_t&>(v));
-			} else {
-				return v;
-			}
-		}
 		// TがAcCheckを継承していればAcWrapperを、そうでなければTを返す
 		template <class... Depend, class CacheVal, class Getter>
 		AcWrapper<CacheVal, Getter, Depend...> Convert_AcCheck(AcCheck<CacheVal, Getter>*);
 		template <class... , class T>
 		T Convert_AcCheck(T*);
+	}
+	//! TがAcWrapperならばその内部値を返す
+	template <class T>
+	inline decltype(auto) UnwrapAcValue(const T& v) noexcept {
+		if constexpr (detail::IsAcWrapper<T>{}) {
+			return lubee::UnwrapValue(static_cast<const typename T::CacheVal_t&>(v));
+		} else {
+			return v;
+		}
 	}
 
 	//! キャッシュ変数の自動管理クラス

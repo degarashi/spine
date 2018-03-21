@@ -8,7 +8,7 @@
 namespace spi {
 	namespace test {
 		template <class T>
-		using GetRaw_t = std::decay_t<decltype(detail::GetAcWrapperValue(std::declval<T>()))>;
+		using GetRaw_t = std::decay_t<decltype(UnwrapAcValue(std::declval<T>()))>;
 		// 1つのキャッシュ変数の更新が別の変数を同時に計算できる場合のテスト用
 		template <class MT, class R>
 		struct RFRefr {
@@ -47,13 +47,13 @@ namespace spi {
 			}
 			template <class Dst, class T>
 			void value01(Dst& dst, T& obj) const {
-				dst = detail::GetAcWrapperValue(obj.getValue0()) + detail::GetAcWrapperValue(obj.getValue1());
+				dst = UnwrapAcValue(obj.getValue0()) + UnwrapAcValue(obj.getValue1());
 				// Value02に関わるキャッシュ変数をmaskに従って書き換え
 				_rewrite<Types0>(obj, IConst<0>(), _mask&((1<<Types0::size)-1));
 			}
 			template <class Dst, class T>
 			void value02(Dst& dst, T& obj) const {
-				dst = detail::GetAcWrapperValue(obj.getValue0()) - detail::GetAcWrapperValue(obj.getValue2());
+				dst = UnwrapAcValue(obj.getValue0()) - UnwrapAcValue(obj.getValue2());
 				// Value01に関わるキャッシュ変数をmaskに従って書き換え
 				_rewrite<Types1>(obj, IConst<0>(), _mask>>Types0::size);
 			}
@@ -131,10 +131,10 @@ namespace spi {
 
 				template <class Tag>
 				auto _calcValue(Tag*) const {
-					return detail::GetAcWrapperValue(_value.cref((Tag*)nullptr));
+					return UnwrapAcValue(_value.cref((Tag*)nullptr));
 				}
 				template <class T>
-				using AcV = std::decay_t<decltype(detail::GetAcWrapperValue(_value.cref((T*)nullptr)))>;
+				using AcV = std::decay_t<decltype(UnwrapAcValue(_value.cref((T*)nullptr)))>;
 				AcV<Value01> _calcValue(Value01*) const {
 					if(_setflag & RF::template FlagMask<Value01>() & ~RF::ACFlag)
 						return _value.cref((Value01*)nullptr);
