@@ -58,9 +58,9 @@ namespace spi {
 						_wpPrevSibling;
 
 			// --- ノードつなぎ変え時に呼ばれる関数. 継承先クラスが適時オーバーライドする ---
-			static void OnParentChange(const TreeNode* /*self*/, const SP& /*node*/) {}
-			static void OnChildRemove(const TreeNode* /*self*/, const SP& /*node*/) {}
-			static void OnChildAdded(const TreeNode* /*self*/, const SP& /*node*/) {}
+			static void OnParentChange(TreeNode* /*self*/, const SP& /*node*/) {}
+			static void OnChildRemove(TreeNode* /*self*/, const SP& /*node*/) {}
+			static void OnChildAdded(TreeNode* /*self*/, const SP& /*node*/) {}
 
 		private:
 			//! 決められた回数分、タブを出力
