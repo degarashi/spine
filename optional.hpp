@@ -204,22 +204,22 @@ namespace spi {
 			~Optional() {
 				_release();
 			}
-			decltype(auto) get() & noexcept {
+			auto get() & noexcept -> decltype(_buffer.get()) {
 				return _buffer.get();
 			}
-			decltype(auto) get() const& noexcept {
+			auto get() const& noexcept -> decltype(_buffer.get()) {
 				return _buffer.get();
 			}
-			decltype(auto) get() && noexcept {
+			auto get() && noexcept -> decltype(std::move(_buffer.get())) {
 				return std::move(_buffer.get());
 			}
-			decltype(auto) operator * () & noexcept {
+			auto operator * () & noexcept -> decltype(get()) {
 				return get();
 			}
-			decltype(auto) operator * () const& noexcept {
+			auto operator * () const& noexcept -> decltype(get()) {
 				return get();
 			}
-			decltype(auto) operator * () && noexcept {
+			auto operator * () && noexcept -> decltype(std::move(get())) {
 				return std::move(get());
 			}
 			explicit operator bool () const noexcept {
