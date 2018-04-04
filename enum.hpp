@@ -19,11 +19,11 @@
 		name(const name&) = default; \
 		name(const e& n): value(n) {} \
 		operator e () const noexcept { return value; } \
-		using serialize_t = std::underlying_type_t<e>; \
+		using value_t = std::underlying_type_t<e>; \
 		template <class Ar> \
-		serialize_t save_minimal(const Ar&) const noexcept { return value; } \
+		value_t save_minimal(const Ar&) const noexcept { return value; } \
 		template <class Ar> \
-		void load_minimal(const Ar&, const serialize_t& v) noexcept { value=static_cast<e>(v); } \
+		void load_minimal(const Ar&, const value_t& v) noexcept { value=static_cast<e>(v); } \
 		const char* toStr() const noexcept { return ToStr(value); } \
 	}
 
