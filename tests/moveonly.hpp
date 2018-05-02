@@ -74,6 +74,14 @@ namespace spi {
 		std::ostream& operator << (std::ostream& os, const MoveOnly<T>& m) {
 			return os << m.get();
 		}
+		template <class T>
+		decltype(auto) Deref_MoveOnly(const MoveOnly<T>& m) {
+			return m.get();
+		}
+		template <class T>
+		decltype(auto) Deref_MoveOnly(const T& t) {
+			return t;
+		}
 
 		template <class T>
 		void ModifyValue(MoveOnly<T>& t) {
