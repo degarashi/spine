@@ -1,6 +1,6 @@
 #include "test.hpp"
 #include "moveonly.hpp"
-#include "../flyweight.hpp"
+#include "../flyweight_item.hpp"
 
 namespace spi {
 	namespace test {
@@ -79,6 +79,30 @@ namespace spi {
 					this->_set.gc();
 				}
 				ASSERT_EQ(set0.size(), set1.size());
+			}
+		}
+		template <class T>
+		using FlyweightItem = Flyweight<T>;
+		TYPED_TEST_CASE(FlyweightItem, FwT);
+
+		TYPED_TEST(FlyweightItem, General) {
+			const auto value = this->template makeRV<TypeParam>();
+			using fw_t = ::spi::FlyweightItem<TypeParam>;
+			fw_t fw_value(TypeParam{value});
+			ASSERT_EQ(value, Deref_MoveOnly(*fw_value));
+			ASSERT_EQ(value, Deref_MoveOnly(fw_value.cref()));
+			ASSERT_EQ(value, Deref_MoveOnly(static_cast<const TypeParam&>(fw_value)));
+
+			if constexpr (std::is_copy_constructible_v<TypeParam>) {
+				std::decay_t<decltype(value)> value2;
+				{
+					auto ref = fw_value.ref();
+					ASSERT_EQ(value, Deref_MoveOnly(*ref));
+					value2 = MakeDifferentValue(*ref);
+					*ref = TypeParam(value2);
+					ASSERT_NE(Deref_MoveOnly(*fw_value), *ref);
+				}
+				ASSERT_EQ(value2, Deref_MoveOnly(*fw_value));
 			}
 		}
 	}
