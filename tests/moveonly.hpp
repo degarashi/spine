@@ -47,6 +47,12 @@ namespace spi {
 				bool operator > (const MoveOnly& m) const noexcept {
 					return getValue() > m.getValue();
 				}
+				bool operator <= (const MoveOnly& m) const noexcept {
+					return getValue() <= m.getValue();
+				}
+				bool operator >= (const MoveOnly& m) const noexcept {
+					return getValue() >= m.getValue();
+				}
 				value_t& get() noexcept {
 					return _value;
 				}
