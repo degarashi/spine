@@ -56,7 +56,10 @@ namespace spi {
 						++itr;
 				}
 			}
-			template <class V>
+			template <
+				class V,
+				ENABLE_IF((std::is_same_v<std::decay_t<V>, value_t>))
+			>
 			SP make(V&& v) {
 				{
 					const auto itr = _set.find(WP(&v));
@@ -69,6 +72,13 @@ namespace spi {
 				SP ret = std::make_shared<const value_t>(std::forward<V>(v));
 				_set.emplace(WP(ret));
 				return ret;
+			}
+			template <
+				class V,
+				ENABLE_IF(!(std::is_same_v<std::decay_t<V>, value_t>))
+			>
+			SP make(V&& v) {
+				return make(value_t(std::forward<V>(v)));
 			}
 	};
 }
