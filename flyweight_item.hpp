@@ -56,7 +56,7 @@ namespace spi {
 				return cref();
 			}
 			const value_t* operator -> () const noexcept {
-				return _sp->get();
+				return _sp.get();
 			}
 			Temp ref() {
 				return Temp(this);
