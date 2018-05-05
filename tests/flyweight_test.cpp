@@ -93,6 +93,15 @@ namespace spi {
 			ASSERT_EQ(value, Deref_MoveOnly(fw_value.cref()));
 			ASSERT_EQ(value, Deref_MoveOnly(static_cast<const TypeParam&>(fw_value)));
 
+			#define Check_OP(op) ASSERT_EQ(value op Deref_MoveOnly(fw_value.cref()), value op fw_value);
+			Check_OP(==)
+			Check_OP(!=)
+			Check_OP(>)
+			Check_OP(>=)
+			Check_OP(<)
+			Check_OP(<=)
+			#undef Check_OP
+
 			if constexpr (std::is_copy_constructible_v<TypeParam>) {
 				std::decay_t<decltype(value)> value2;
 				{

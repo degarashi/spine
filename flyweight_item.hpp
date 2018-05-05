@@ -61,7 +61,35 @@ namespace spi {
 			Temp ref() {
 				return Temp(this);
 			}
+			#define DEF_OP(op) bool operator op (const value_t& v) const noexcept { return cref() op v; }
+			DEF_OP(==)
+			DEF_OP(!=)
+			DEF_OP(>)
+			DEF_OP(>=)
+			DEF_OP(<)
+			DEF_OP(<=)
+			#undef DEF_OP
 	};
 	template <class T, class F_Hash, class F_Cmp>
 	typename FlyweightItem<T, F_Hash, F_Cmp>::Set FlyweightItem<T, F_Hash, F_Cmp>::s_set;
+
+	namespace detail {
+		template <class T>
+		struct is_flyweightitem : std::false_type {};
+		template <class T, class FH, class FC>
+		struct is_flyweightitem<FlyweightItem<T,FH,FC>> : std::true_type {};
+	}
+
+	#define DEF_OP(op) \
+		template <class Val, class T, class F_Hash, class F_Cmp, ENABLE_IF(!detail::is_flyweightitem<Val>{})> \
+		bool operator op (const Val& val, const FlyweightItem<T, F_Hash, F_Cmp>& fw) noexcept { \
+			return fw.cref() op val; \
+		}
+	DEF_OP(==)
+	DEF_OP(!=)
+	DEF_OP(>)
+	DEF_OP(>=)
+	DEF_OP(<)
+	DEF_OP(<=)
+	#undef DEF_OP
 }
