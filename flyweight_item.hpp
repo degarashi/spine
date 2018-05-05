@@ -61,6 +61,12 @@ namespace spi {
 			Temp ref() {
 				return Temp(this);
 			}
+			bool operator == (const FlyweightItem& fw) const noexcept {
+				return _sp == fw._sp;
+			}
+			bool operator != (const FlyweightItem& fw) const noexcept {
+				return _sp != fw._sp;
+			}
 			#define DEF_OP(op) bool operator op (const value_t& v) const noexcept { return cref() op v; }
 			DEF_OP(==)
 			DEF_OP(!=)
