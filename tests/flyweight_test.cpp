@@ -114,5 +114,22 @@ namespace spi {
 				ASSERT_EQ(value2, Deref_MoveOnly(*fw_value));
 			}
 		}
+		TYPED_TEST(FlyweightItem, Hash) {
+			using fw_t = ::spi::FlyweightItem<TypeParam>;
+			using fw_set = std::unordered_set<fw_t>;
+			using raw_set = std::unordered_set<TypeParam>;
+			fw_set	fwset;
+			raw_set rset;
+
+			std::size_t N = 1024;
+			while(N != 0) {
+				const auto value = this->template makeRV<TypeParam>();
+				fwset.emplace(TypeParam(value));
+				rset.emplace(value);
+				--N;
+			}
+
+			ASSERT_EQ(rset.size(), fwset.size());
+		}
 	}
 }

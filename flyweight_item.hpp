@@ -93,3 +93,12 @@ namespace spi {
 	DEF_OP(<=)
 	#undef DEF_OP
 }
+namespace std {
+	template <class T, class F_Hash, class F_Cmp>
+	struct hash<spi::FlyweightItem<T, F_Hash, F_Cmp>> {
+		std::size_t operator()(const spi::FlyweightItem<T,F_Hash,F_Cmp>& f) const noexcept {
+			auto* r = &f.cref();
+			return std::hash<decltype(r)>()(r);
+		}
+	};
+}
