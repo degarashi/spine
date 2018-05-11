@@ -5,6 +5,11 @@ namespace spi {
 	template <class T, class F_Hash=std::hash<T>, class F_Cmp=std::equal_to<>>
 	class FlyweightItem {
 		private:
+			template <class Ar, class T2, class FH2, class FC2>
+			friend void save(Ar&, const FlyweightItem<T2,FH2,FC2>&);
+			template <class Ar, class T2, class FH2, class FC2>
+			friend void load(Ar&, FlyweightItem<T2,FH2,FC2>&);
+
 			using value_t = T;
 			using self_t = FlyweightItem<value_t, F_Hash, F_Cmp>;
 			struct Temp {

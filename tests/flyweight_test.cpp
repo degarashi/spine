@@ -1,6 +1,8 @@
 #include "test.hpp"
 #include "moveonly.hpp"
 #include "../flyweight_item.hpp"
+#include "lubee/check_serialization.hpp"
+#include "../serialization/flyweight_item.hpp"
 
 namespace spi {
 	namespace test {
@@ -130,6 +132,13 @@ namespace spi {
 			}
 
 			ASSERT_EQ(rset.size(), fwset.size());
+		}
+		TYPED_TEST(FlyweightItem, Serialization) {
+			const auto value = this->template makeRV<TypeParam>();
+			using fw_t = ::spi::FlyweightItem<TypeParam>;
+			fw_t fw(value);
+			lubee::CheckSerialization(fw,
+				[](const auto& f0, const auto& f1){ return *f0 == *f1; });
 		}
 		TYPED_TEST(FlyweightItem, Null) {
 			const auto value = this->template makeRV<TypeParam>();
