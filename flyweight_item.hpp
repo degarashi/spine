@@ -56,8 +56,14 @@ namespace spi {
 			const value_t* operator -> () const noexcept {
 				return _sp.get();
 			}
+			const value_t* get() const noexcept {
+				return _sp.get();
+			}
 			Temp ref() {
 				return Temp(this);
+			}
+			explicit operator bool () const noexcept {
+				return static_cast<bool>(_sp);
 			}
 			bool operator == (const FlyweightItem& fw) const noexcept {
 				return _sp == fw._sp;

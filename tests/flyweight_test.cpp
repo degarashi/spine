@@ -131,5 +131,15 @@ namespace spi {
 
 			ASSERT_EQ(rset.size(), fwset.size());
 		}
+		TYPED_TEST(FlyweightItem, Null) {
+			const auto value = this->template makeRV<TypeParam>();
+			using fw_t = ::spi::FlyweightItem<TypeParam>;
+			fw_t fw_null,
+				 fw_val(value);
+			ASSERT_EQ(fw_null, fw_null);
+			ASSERT_NE(fw_null, fw_val);
+			ASSERT_FALSE(fw_null);
+			ASSERT_TRUE(fw_val);
+		}
 	}
 }
