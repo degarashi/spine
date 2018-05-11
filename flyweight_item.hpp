@@ -45,9 +45,11 @@ namespace spi {
 
 		public:
 			FlyweightItem() = default;
-			template <class V>
-			FlyweightItem(V&& v):
-				_sp(s_set.make(std::forward<V>(v)))
+			FlyweightItem(const value_t& v):
+				_sp(s_set.make(v))
+			{}
+			FlyweightItem(value_t&& v):
+				_sp(s_set.make(std::move(v)))
 			{}
 			const value_t& cref() const noexcept {
 				return static_cast<const value_t&>(*_sp);
