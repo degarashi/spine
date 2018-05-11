@@ -39,9 +39,7 @@ namespace spi {
 			SP	_sp;
 
 		public:
-			FlyweightItem():
-				_sp(s_set.make(value_t{}))
-			{}
+			FlyweightItem() = default;
 			template <class V>
 			FlyweightItem(V&& v):
 				_sp(s_set.make(std::forward<V>(v)))
@@ -67,7 +65,7 @@ namespace spi {
 			bool operator != (const FlyweightItem& fw) const noexcept {
 				return _sp != fw._sp;
 			}
-			#define DEF_OP(op) bool operator op (const value_t& v) const noexcept { return cref() op v; }
+			#define DEF_OP(op) bool operator op (const value_t& v) const noexcept { return *this && (cref() op v); }
 			DEF_OP(==)
 			DEF_OP(!=)
 			DEF_OP(>)
@@ -89,7 +87,7 @@ namespace spi {
 	#define DEF_OP(op) \
 		template <class Val, class T, class F_Hash, class F_Cmp, ENABLE_IF(!detail::is_flyweightitem<Val>{})> \
 		bool operator op (const Val& val, const FlyweightItem<T, F_Hash, F_Cmp>& fw) noexcept { \
-			return fw.cref() op val; \
+			return fw && (fw.cref() op val); \
 		}
 	DEF_OP(==)
 	DEF_OP(!=)
@@ -103,8 +101,11 @@ namespace std {
 	template <class T, class F_Hash, class F_Cmp>
 	struct hash<spi::FlyweightItem<T, F_Hash, F_Cmp>> {
 		std::size_t operator()(const spi::FlyweightItem<T,F_Hash,F_Cmp>& f) const noexcept {
-			auto* r = &f.cref();
-			return std::hash<decltype(r)>()(r);
+			if(f) {
+				auto* r = &f.cref();
+				return std::hash<decltype(r)>()(r);
+			}
+			return 0;
 		}
 	};
 }
