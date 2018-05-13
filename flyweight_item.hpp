@@ -54,6 +54,9 @@ namespace spi {
 			const value_t& cref() const noexcept {
 				return static_cast<const value_t&>(*_sp);
 			}
+			static void GC() {
+				s_set.gc();
+			}
 			operator const value_t& () const noexcept {
 				return cref();
 			}
