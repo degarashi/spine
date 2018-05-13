@@ -47,7 +47,8 @@ namespace spi {
 			Set			_set;
 
 		public:
-			void gc() {
+			std::size_t gc() {
+				const auto prev = _set.size();
 				auto itr = _set.begin();
 				while(itr != _set.end()) {
 					if(itr->wp.expired()) {
@@ -55,6 +56,7 @@ namespace spi {
 					} else
 						++itr;
 				}
+				return prev - _set.size();
 			}
 			template <
 				class V,
