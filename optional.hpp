@@ -25,15 +25,9 @@ namespace spi {
 			}
 
 			T* ptr() noexcept {
-				// Debug時は中身が有効かチェック
-				#ifdef DEBUG
-				#endif
 				return reinterpret_cast<T*>(_data);
 			}
 			const T* ptr() const noexcept {
-				// Debug時は中身が有効かチェック
-				#ifdef DEBUG
-				#endif
 				return reinterpret_cast<const T*>(_data);
 			}
 			T& get() noexcept {
@@ -193,7 +187,7 @@ namespace spi {
 					v._invalidate_if_rvalue();
 				}
 			}
-			//! デフォルト初期化: 中身は無効　
+			//! デフォルト初期化: 中身は無効
 			Optional() noexcept:
 				_bInit(false)
 			{}
@@ -205,12 +199,16 @@ namespace spi {
 				_release();
 			}
 			auto get() & noexcept -> decltype(_buffer.get()) {
+				// Debug時は中身が有効かチェック
+				D_Assert0(_bInit);
 				return _buffer.get();
 			}
 			auto get() const& noexcept -> decltype(_buffer.get()) {
+				D_Assert0(_bInit);
 				return _buffer.get();
 			}
 			auto get() && noexcept -> decltype(std::move(_buffer.get())) {
+				D_Assert0(_bInit);
 				return std::move(_buffer.get());
 			}
 			auto operator * () & noexcept -> decltype(get()) {
@@ -232,9 +230,11 @@ namespace spi {
 				return _buffer.ptr();
 			}
 			auto operator -> () noexcept -> decltype(_buffer.ptr()) {
+				D_Assert0(_bInit);
 				return _buffer.ptr();
 			}
 			auto operator -> () const noexcept -> decltype(_buffer.ptr()) {
+				D_Assert0(_bInit);
 				return _buffer.ptr();
 			}
 			bool operator == (const Optional& t) const noexcept {
