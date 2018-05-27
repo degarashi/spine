@@ -225,6 +225,12 @@ namespace spi {
 			explicit operator bool () const noexcept {
 				return _bInit;
 			}
+			auto pointer() noexcept -> decltype(_buffer.ptr()) {
+				return _buffer.ptr();
+			}
+			auto pointer() const noexcept -> decltype(_buffer.ptr()) {
+				return _buffer.ptr();
+			}
 			auto operator -> () noexcept -> decltype(_buffer.ptr()) {
 				return _buffer.ptr();
 			}
