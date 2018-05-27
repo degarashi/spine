@@ -126,7 +126,6 @@ namespace spi {
 		private:
 			template <class T2>
 			friend class Optional;
-			using value_t = T;
 			constexpr static bool Is_RP = IsRP<T>{};
 			using Buffer = opt_tmp::Buffer<T>;
 			Buffer	_buffer;
@@ -157,6 +156,7 @@ namespace spi {
 			}
 
 		public:
+			using value_t = T;
 			const static struct _AsInitialized{} AsInitialized;
 			//! コンストラクタは呼ばないが初期化された物として扱う
 			/*! ユーザーが自分でコンストラクタを呼ばないとエラーになる */
