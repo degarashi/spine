@@ -285,9 +285,9 @@ namespace spi {
 				else {
 					if(!_bInit) {
 						_bInit = true;
-						_buffer.ctor();
-					}
-					_buffer = std::forward<T2>(t).get();
+						_buffer.ctor(std::forward<T2>(t).get());
+					} else
+						_buffer = std::forward<T2>(t).get();
 				}
 				return *this;
 			}
