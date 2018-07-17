@@ -93,7 +93,7 @@ namespace spi {
 			using Vec = std::vector<shared_t>;
 			// シリアライズで復元した際の一時的なバックアップ
 			// (内部にweak_ptrしか持っておらず削除されてしまう為)
-			Vec				_serializeBackup;
+			mutable Vec		_serializeBackup;
 
 			template <class T2>
 			static void _Release(const Resource_SP& r, T2* p) noexcept {
@@ -197,7 +197,7 @@ namespace spi {
 				_resource = std::make_shared<Resource>();
 				_acounter = 0;
 			}
-			void cleanBackup() {
+			void cleanBackup() const {
 				_serializeBackup.clear();
 			}
 			const Vec& getBackup() const {
