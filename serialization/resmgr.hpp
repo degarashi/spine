@@ -6,7 +6,7 @@
 namespace spi {
 	template <class Ar, class T>
 	void save(Ar& ar, const ResMgr<T>& mgr) {
-		D_Assert0(mgr._serializeBackup.empty());
+		mgr.cleanBackup();
 		using Mgr = std::decay_t<decltype(mgr)>;
 		using SPV = std::vector<typename Mgr::shared_t>;
 		// 一旦shared_ptrに変換
