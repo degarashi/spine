@@ -46,8 +46,8 @@ namespace spi {
 				using Counter_t = typename Getter::counter_t;
 				using value_t = typename CacheVal_t::value_t;
 			private:
-				mutable AcCounter_t ac_counter[sizeof...(Ts)];
-				mutable Counter_t user_counter[sizeof...(Ts)];
+				mutable AcCounter_t ac_counter[lubee::Arithmetic<1, sizeof...(Ts)>::great];
+				mutable Counter_t user_counter[lubee::Arithmetic<1, sizeof...(Ts)>::great];
 
 				template <class Ar, class C, class G, class... T>
 				friend void serialize(Ar&, AcWrapper<C,G,T...>&);
