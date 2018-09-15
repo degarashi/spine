@@ -154,10 +154,11 @@ namespace spi {
 		class IDType = uint_fast32_t
 	>
 	class noseq_list {
-		private:
-			using this_t = noseq_list<T,Allocator,IDType>;
+		public:
 			using id_t = IDType;
 			using value_t = T;
+		private:
+			using this_t = noseq_list<T,Allocator,IDType>;
 			using entry_t = _noseq_list::Entry<value_t, id_t>;
 			using ids_t = _noseq_list::IDS<id_t>;
 
