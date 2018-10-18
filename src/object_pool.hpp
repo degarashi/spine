@@ -2,8 +2,8 @@
 #include <vector>
 #include <memory>
 #include <cassert>
-#include "lubee/meta/enable_if.hpp"
-#include "lubee/error.hpp"
+#include "lubee/src/meta/enable_if.hpp"
+#include "lubee/src/error.hpp"
 #include <cstring>
 
 #ifdef OBJECT_POOL_CHECKBLOCK

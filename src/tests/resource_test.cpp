@@ -1,7 +1,7 @@
 #include "test.hpp"
 #include "../resmgr.hpp"
 #include "../resmgr_named.hpp"
-#include "lubee/random/string.hpp"
+#include "lubee/src/random/string.hpp"
 #include "../serialization/resmgr.hpp"
 #include "../serialization/resmgr_named.hpp"
 #include "../enum.hpp"

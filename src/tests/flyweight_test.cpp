@@ -1,7 +1,7 @@
 #include "test.hpp"
 #include "moveonly.hpp"
 #include "../flyweight_item.hpp"
-#include "lubee/check_serialization.hpp"
+#include "lubee/src/check_serialization.hpp"
 #include "../serialization/flyweight_item.hpp"
 
 namespace spi {

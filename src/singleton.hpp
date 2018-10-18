@@ -1,6 +1,6 @@
 #pragma once
 #include "address.hpp"
-#include "lubee/error.hpp"
+#include "lubee/src/error.hpp"
 
 namespace spi {
 	//! 汎用シングルトン

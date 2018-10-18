@@ -1,7 +1,7 @@
 #pragma once
-#include "lubee/meta/check_macro.hpp"
-#include "lubee/meta/enable_if.hpp"
-#include "lubee/error.hpp"
+#include "lubee/src/meta/check_macro.hpp"
+#include "lubee/src/meta/enable_if.hpp"
+#include "lubee/src/error.hpp"
 #include "enum.hpp"
 #include <vector>
 #include <algorithm>

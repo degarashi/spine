@@ -1,6 +1,6 @@
 #pragma once
-#include "lubee/random.hpp"
-#include "lubee/check_serialization.hpp"
+#include "lubee/src/random.hpp"
+#include "lubee/src/check_serialization.hpp"
 
 namespace spi {
 	namespace test {

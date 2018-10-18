@@ -2,10 +2,10 @@
 #include "valueholder.hpp"
 #include <tuple>
 #include <boost/preprocessor.hpp>
-#include "lubee/meta/typelist.hpp"
-#include "lubee/meta/constant_t.hpp"
-#include "lubee/wrapper.hpp"
-#include "lubee/error.hpp"
+#include "lubee/src/meta/typelist.hpp"
+#include "lubee/src/meta/constant_t.hpp"
+#include "lubee/src/wrapper.hpp"
+#include "lubee/src/error.hpp"
 
 namespace spi {
 	//! 更新フラグ群を格納する数値型

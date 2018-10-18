@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "lubee/error.hpp"
+#include "lubee/src/error.hpp"
 
 namespace spi {
 	//! 順序なし配列

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <limits>
 #include "optional.hpp"
-#include "lubee/wrapper.hpp"
+#include "lubee/src/wrapper.hpp"
 #include "enum.hpp"
 
 namespace spi {

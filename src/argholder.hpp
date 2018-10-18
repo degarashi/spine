@@ -1,6 +1,6 @@
 #pragma once
-#include "lubee/error.hpp"
-#include "lubee/meta/enable_if.hpp"
+#include "lubee/src/error.hpp"
+#include "lubee/src/meta/enable_if.hpp"
 
 namespace spi {
 	template <class... Ts>

@@ -1,6 +1,6 @@
 #include "test.hpp"
 #include "moveonly.hpp"
-#include "lubee/random/string.hpp"
+#include "lubee/src/random/string.hpp"
 #include "../serialization/noseq_vec.hpp"
 
 namespace spi {

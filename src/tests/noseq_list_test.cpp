@@ -1,8 +1,8 @@
 #include "test.hpp"
-#include "lubee/random/string.hpp"
+#include "lubee/src/random/string.hpp"
 #include "moveonly.hpp"
 #include "../serialization/noseq_list.hpp"
-#include "lubee/check_serialization.hpp"
+#include "lubee/src/check_serialization.hpp"
 
 namespace spi {
 	namespace test {
