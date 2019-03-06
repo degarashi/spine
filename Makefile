@@ -1,5 +1,5 @@
 LIB_NAME			:= spine
-COMMON_MAKE_PATH	:= lubee
 MAKE_GDBINIT		:= YES
+MAKE_COMPILECOMMANDS_LINK	:= YES
 
 include lubee/common.make
