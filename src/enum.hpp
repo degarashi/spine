@@ -19,6 +19,15 @@
 		name(const name&) = default; \
 		name(const e& n): value(n) {} \
 		operator e () const noexcept { return value; } \
+		name& operator |= (const e& n) noexcept { \
+			value = static_cast<e>(value | n); \
+			return *this; } \
+		name& operator &= (const e& n) noexcept { \
+			value = static_cast<e>(value & n); \
+			return *this; } \
+		name& operator ^= (const e& n) noexcept { \
+			value = static_cast<e>(value ^ n); \
+			return *this; } \
 		using value_t = std::underlying_type_t<e>; \
 		template <class Ar> \
 		value_t save_minimal(const Ar&) const noexcept { return value; } \
