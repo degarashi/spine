@@ -16,23 +16,24 @@
 		} value; \
 		func(seq) \
 		name() = default; \
-		name(const name&) = default; \
-		name(const e& n): value(n) {} \
-		operator e () const noexcept { return value; } \
-		name& operator |= (const e& n) noexcept { \
+		constexpr name(const name&) = default; \
+		constexpr name(const e& n): value(n) {} \
+		using value_t = std::underlying_type_t<e>; \
+		constexpr name(const value_t& n): value(static_cast<e>(n)) {} \
+		constexpr operator e () const noexcept { return value; } \
+		constexpr name& operator |= (const e& n) noexcept { \
 			value = static_cast<e>(value | n); \
 			return *this; } \
-		name& operator &= (const e& n) noexcept { \
+		constexpr name& operator &= (const e& n) noexcept { \
 			value = static_cast<e>(value & n); \
 			return *this; } \
-		name& operator ^= (const e& n) noexcept { \
+		constexpr name& operator ^= (const e& n) noexcept { \
 			value = static_cast<e>(value ^ n); \
 			return *this; } \
-		using value_t = std::underlying_type_t<e>; \
 		template <class Ar> \
-		value_t save_minimal(const Ar&) const noexcept { return value; } \
+		constexpr value_t save_minimal(const Ar&) const noexcept { return value; } \
 		template <class Ar> \
-		void load_minimal(const Ar&, const value_t& v) noexcept { value=static_cast<e>(v); } \
+		constexpr void load_minimal(const Ar&, const value_t& v) noexcept { value=static_cast<e>(v); } \
 		const char* toStr() const noexcept { return ToStr(value); } \
 	}
 
