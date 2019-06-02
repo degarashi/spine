@@ -1,6 +1,7 @@
 #pragma once
-#include <boost/preprocessor.hpp>
 #include "enum_t.hpp"
+#include <boost/preprocessor.hpp>
+#include <utility>
 
 // 内部使用
 #define DefineEnumStr_func2(r, data, elem) BOOST_PP_STRINGIZE(elem),
