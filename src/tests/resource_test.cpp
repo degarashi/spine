@@ -19,7 +19,7 @@ namespace spi {
 			}
 		};
 		using Types = ::testing::Types<TestObj<int>, TestObj<double>>;
-		TYPED_TEST_CASE(ResourceMgr, Types);
+		TYPED_TEST_SUITE(ResourceMgr, Types);
 
 		TYPED_TEST(ResourceMgr, Serialization) {
 			USING(value_t);
@@ -112,7 +112,7 @@ namespace spi {
 			}
 		};
 		using NTypes = ::testing::Types<TestObj<int>>;
-		TYPED_TEST_CASE(ResourceMgrName, NTypes);
+		TYPED_TEST_SUITE(ResourceMgrName, NTypes);
 
 		TYPED_TEST(ResourceMgrName, Serialization) {
 			USING(value_t);

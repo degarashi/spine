@@ -23,7 +23,7 @@ namespace spi {
 			}
 		};
 		using FwT = ::testing::Types<uint32_t, MoveOnly<uint32_t>>;
-		TYPED_TEST_CASE(Flyweight, FwT);
+		TYPED_TEST_SUITE(Flyweight, FwT);
 
 		TYPED_TEST(Flyweight, Make) {
 			const auto value = this->template makeRV<TypeParam>();
@@ -85,7 +85,7 @@ namespace spi {
 		}
 		template <class T>
 		using FlyweightItem = Flyweight<T>;
-		TYPED_TEST_CASE(FlyweightItem, FwT);
+		TYPED_TEST_SUITE(FlyweightItem, FwT);
 
 		TYPED_TEST(FlyweightItem, General) {
 			const auto value = this->template makeRV<TypeParam>();

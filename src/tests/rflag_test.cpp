@@ -442,7 +442,7 @@ namespace spi {
 							std::tuple<CTypes, C2TypesAc>,
 							std::tuple<CTypesAc, C2TypesAc>
 						>;
-		TYPED_TEST_CASE(RFlag, NTypes);
+		TYPED_TEST_SUITE(RFlag, NTypes);
 
 		template <class RF, class MT>
 		void Check(RF& obj, MT& mt, const bool bChk) {

@@ -156,7 +156,7 @@ namespace spi {
 		template <class T>
 		struct ObjectPool : Random {};
 		using Types = ::testing::Types<TestObj<int>, TestObj<double>>;
-		TYPED_TEST_CASE(ObjectPool, Types);
+		TYPED_TEST_SUITE(ObjectPool, Types);
 
 		// Trivialではないオブジェクトの生成、破棄
 		TYPED_TEST(ObjectPool, General) {
@@ -173,7 +173,7 @@ namespace spi {
 		template <class T>
 		using ObjectPoolT = ObjectPool<T>;
 		using TypesT = ::testing::Types<int, double>;
-		TYPED_TEST_CASE(ObjectPoolT, TypesT);
+		TYPED_TEST_SUITE(ObjectPoolT, TypesT);
 
 		// Trivialなオブジェクトの生成、破棄
 		TYPED_TEST(ObjectPoolT, General) {

@@ -57,7 +57,7 @@ namespace spi::test {
 
 	namespace {
 		using Types = ::testing::Types<Enum0, Enum1, Enum2>;
-		TYPED_TEST_CASE(Enum, Types);
+		TYPED_TEST_SUITE(Enum, Types);
 	}
 
 	TYPED_TEST(Enum, General) {

@@ -22,7 +22,7 @@ namespace spi {
 			}
 		};
 		using Types = ::testing::Types<uint8_t, uint64_t, double, MoveOnly<uint64_t>>;
-		TYPED_TEST_CASE(Optional, Types);
+		TYPED_TEST_SUITE(Optional, Types);
 
 		template <class V, class MkValue, ENABLE_IF(!(std::is_copy_assignable<V>{}))>
 		void CheckCopyAssign(MkValue&&) {}
