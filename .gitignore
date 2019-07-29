@@ -1,4 +1,5 @@
 .clang
+.clangd
 *.cbp
 *.user*
 __pycache__
