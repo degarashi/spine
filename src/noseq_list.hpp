@@ -68,8 +68,6 @@ namespace spi {
 					ret -= n;
 					return ret;
 				}
-				using base_t::operator -;
-
 				this_t& operator += (const int n) noexcept {
 					base_t::operator += (n);
 					return *this;
