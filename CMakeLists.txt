@@ -5,7 +5,7 @@ set(COMMON_COMPILE lubee/common_compile)
 include(${COMMON_COMPILE}/cxx_setup.cmake)
 include(${COMMON_COMPILE}/compile_commands.cmake)
 include(${COMMON_COMPILE}/aux.cmake)
-SetupCXX(17)
+SetupCXX(17 CompileCommands)
 string(CONCAT CMAKE_CXX_FLAGS " -Wno-c99-extensions")
 string(CONCAT CMAKE_CXX_FLAGS " -Wno-gnu-zero-variadic-macro-arguments")
 
